@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: second-brain-rag
+  datasource:
+    url: jdbc:postgresql://db.fyfvyxztprbllrhslnnj.supabase.co:5432/postgres
+    username: postgres
+    password: ${DB_BRAIN_RAG_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
