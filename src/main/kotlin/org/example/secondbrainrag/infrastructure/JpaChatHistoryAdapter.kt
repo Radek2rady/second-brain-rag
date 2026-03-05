@@ -33,4 +33,8 @@ class JpaChatHistoryAdapter(
             )
         }
     }
+
+    override fun getConversations(): List<String> {
+        return repository.findConversationsOrderedByMostRecent()
+    }
 }

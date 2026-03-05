@@ -24,4 +24,14 @@ interface VectorDocumentPort {
      * @return List of matching documents
      */
     fun searchSimilar(query: String, topK: Int = 4): List<VectorDocument>
+
+    /**
+     * Retrieves all documents stored in the database.
+     */
+    fun getAllDocuments(): List<VectorDocument>
+
+    /**
+     * Deletes a specific document by its ID.
+     */
+    fun deleteDocument(id: String)
 }

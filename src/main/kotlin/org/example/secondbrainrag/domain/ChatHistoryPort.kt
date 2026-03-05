@@ -22,4 +22,9 @@ interface ChatHistoryPort {
      * Returned in chronological order (oldest first).
      */
     fun getLastMessages(conversationId: String, limit: Int): List<ChatMessage>
+
+    /**
+     * Retrieves a list of unique conversation IDs, ordered by the most recently created message.
+     */
+    fun getConversations(): List<String>
 }

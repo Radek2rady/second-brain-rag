@@ -2,14 +2,18 @@ package org.example.secondbrainrag.infrastructure.web
 
 import org.example.secondbrainrag.application.DocumentService
 import org.example.secondbrainrag.application.IngestionService
+import org.example.secondbrainrag.domain.ChatHistoryPort
 import org.example.secondbrainrag.domain.VectorDocument
+import org.example.secondbrainrag.domain.VectorDocumentPort
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/documents")
 class DocumentController(
     private val documentService: DocumentService,
-    private val ingestionService: IngestionService
+    private val ingestionService: IngestionService,
+    private val chatHistoryPort: ChatHistoryPort,
+    private val vectorDocumentPort: VectorDocumentPort
 ) {
 
     data class SaveRequest(val content: String, val metadata: Map<String, String>? = null)
@@ -21,7 +25,7 @@ class DocumentController(
             content = request.content,
             metadata = request.metadata ?: emptyMap()
         )
-        documentService.saveDocuments(listOf(doc))
+        vectorDocumentPort.save(listOf(doc))
         return mapOf("status" to "success", "id" to doc.id)
     }
 
@@ -45,5 +49,28 @@ class DocumentController(
     ): ChatResponse {
         val (activeConversationId, answer) = documentService.chat(query, conversationId)
         return ChatResponse(answer, activeConversationId)
+    }
+
+    @GetMapping("/conversations")
+    fun getConversations(): List<String> {
+        return chatHistoryPort.getConversations()
+    }
+
+    @GetMapping("/chat/history")
+    fun getChatHistory(@RequestParam conversationId: String): List<Map<String, String>> {
+        return chatHistoryPort.getLastMessages(conversationId, 50).map {
+            mapOf("role" to it.role, "content" to it.content)
+        }
+    }
+
+    @GetMapping
+    fun getAllDocuments(): List<VectorDocument> {
+        return vectorDocumentPort.getAllDocuments()
+    }
+
+    @DeleteMapping("/{id}")
+    fun deleteDocument(@PathVariable id: String): Map<String, String> {
+        vectorDocumentPort.deleteDocument(id)
+        return mapOf("status" to "success", "message" to "Document $id deleted")
     }
 }
