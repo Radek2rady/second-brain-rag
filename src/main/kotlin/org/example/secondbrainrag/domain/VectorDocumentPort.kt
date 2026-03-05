@@ -12,6 +12,11 @@ interface VectorDocumentPort {
     fun save(documents: List<VectorDocument>)
 
     /**
+     * Saves a list of documents into the vector store in bulk format.
+     */
+    fun saveAll(documents: List<VectorDocument>)
+
+    /**
      * Searches for documents similar to the given query text.
      * 
      * @param query The text to search for

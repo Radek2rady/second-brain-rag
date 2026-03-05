@@ -7,6 +7,7 @@ spring:
     password: ${DB_BRAIN_RAG_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
     properties:
@@ -21,3 +22,7 @@ spring:
     vectorstore:
       pgvector:
         initialize-schema: true
+
+logging:
+  level:
+    org.springframework.ai: DEBUG

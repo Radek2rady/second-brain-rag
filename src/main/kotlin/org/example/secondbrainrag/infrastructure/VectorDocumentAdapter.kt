@@ -13,8 +13,14 @@ class VectorDocumentAdapter(
 ) : VectorDocumentPort {
 
     override fun save(documents: List<VectorDocument>) {
+        saveAll(documents) // Delegating to saveAll for logic reuse
+    }
+
+    override fun saveAll(documents: List<VectorDocument>) {
         val springAiDocuments = documents.map { doc ->
-            Document(doc.id, doc.content, doc.metadata)
+            // Ensuring the ID is formatted as a valid UUID string
+            val formattedId = java.util.UUID.fromString(doc.id).toString()
+            Document(formattedId, doc.content, doc.metadata)
         }
         vectorStore.add(springAiDocuments)
     }
@@ -25,7 +31,7 @@ class VectorDocumentAdapter(
         
         return results?.map { doc ->
             VectorDocument(
-                id = doc.id,
+                id = java.util.UUID.fromString(doc.id).toString(),
                 content = doc.text ?: "",
                 metadata = doc.metadata.mapValues { it.value.toString() }
             )

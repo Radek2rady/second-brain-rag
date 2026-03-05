@@ -1,0 +1,19 @@
+### 1. Uložení znalosti do "mozku"
+POST http://localhost:8080/api/documents
+Content-Type: application/json
+
+{
+  "content": "Můj pes se jmenuje Alík a má strašně rád borůvky. Narodil se 15. května 2022.",
+  "metadata": {
+    "source": "manual-entry",
+    "category": "personal"
+  }
+}
+
+### 2. Test sémantického vyhledávání (Retrieval)
+GET http://localhost:8080/api/documents/search?query=co jí můj pes?&topK=1
+
+### 3. Test RAG odpovědi (Generation)
+# Tady uvidíš magii: LLM by mělo odpovědět "Alík má rád borůvky."
+GET http://localhost:8080/api/documents/chat?query=Jaké je nejoblíbenější jídlo mého psa?
+
