@@ -19,6 +19,6 @@ class SpringAiDocumentSplitterAdapter : DocumentSplitterPort {
         val inputDocs = listOf(Document(content))
         val outputDocs = splitter.apply(inputDocs)
         
-        return outputDocs.map { it.content }
+        return outputDocs.map { it.text ?: "" }
     }
 }

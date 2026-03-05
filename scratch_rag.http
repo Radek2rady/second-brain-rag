@@ -17,3 +17,18 @@ GET http://localhost:8080/api/documents/search?query=co jí můj pes?&topK=1
 # Tady uvidíš magii: LLM by mělo odpovědět "Alík má rád borůvky."
 GET http://localhost:8080/api/documents/chat?query=Jaké je nejoblíbenější jídlo mého psa?
 
+### 1. Ingestování manuálu AuraOS (Hromadné nahrání)
+POST http://localhost:8080/api/documents/ingest
+Content-Type: application/json
+
+{
+  "text": "AuraOS v.4.2 - Uživatelský manuál. Systém AuraOS používá pro bezpečné přihlášení protokol „Lumina-7“. Pokud zapomenete heslo, musíte na terminálu zadat příkaz 'aura-reset --force-magenta'. Hlavním architektem systému byl Dr. Aris Thorne v roce 2029. Energetický režim „Deep Chill“ snižuje frekvenci procesoru na 1.2 GHz, ale aktivuje kvantové šifrování na pozadí. Pro připojení k holografickému displeji použijte port typu Omega-C situovaný na spodní straně zařízení.",
+  "metadata": {
+    "doc_type": "manual",
+    "version": "4.2"
+  }
+}
+
+### 2. Dotaz na specifickou informaci (Chat)
+# Očekávaná odpověď by měla obsahovat příkaz 'aura-reset --force-magenta'
+GET http://localhost:8080/api/documents/chat?query=Jaký příkaz musím použít pro resetování hesla v AuraOS?

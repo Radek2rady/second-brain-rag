@@ -6,11 +6,12 @@ package org.example.secondbrainrag.domain
  */
 interface ChatPort {
     /**
-     * Generates a conversational response based on the query and provided context.
+     * Generates a conversational response based on the query, context, and chat history.
      * 
      * @param query The user's question
      * @param context The text context retrieved from the database
+     * @param history Previous messages in the conversation
      * @return Generated AI response
      */
-    fun generateResponse(query: String, context: String): String
+    fun generateResponse(query: String, context: String, history: List<ChatMessage> = emptyList()): String
 }

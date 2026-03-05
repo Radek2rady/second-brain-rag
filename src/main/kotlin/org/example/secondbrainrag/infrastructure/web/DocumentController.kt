@@ -1,6 +1,7 @@
 package org.example.secondbrainrag.infrastructure.web
 
 import org.example.secondbrainrag.application.DocumentService
+import org.example.secondbrainrag.application.IngestionService
 import org.example.secondbrainrag.domain.VectorDocument
 import org.springframework.web.bind.annotation.*
 
@@ -35,11 +36,14 @@ class DocumentController(
         return documentService.searchSimilar(query, topK)
     }
 
-    data class ChatResponse(val answer: String)
+    data class ChatResponse(val answer: String, val conversationId: String)
 
     @GetMapping("/chat")
-    fun chat(@RequestParam query: String): ChatResponse {
-        val answer = documentService.chat(query)
-        return ChatResponse(answer)
+    fun chat(
+        @RequestParam query: String,
+        @RequestParam(required = false) conversationId: String?
+    ): ChatResponse {
+        val (activeConversationId, answer) = documentService.chat(query, conversationId)
+        return ChatResponse(answer, activeConversationId)
     }
 }

@@ -10,8 +10,9 @@ Vytvořit inteligentního asistenta, který umí odpovídat na dotazy na základ
 - [x] Implementováno ukládání a sémantické vyhledávání (Retrieval)
 - [x] Implementace LLM Chat endpointu přes `ChatClient` a porty
 - [x] Backendové jádro RAG je plně funkční a otestované manuálně přes HTTP clienta (Alíkův test prošel!)
-- [ ] Stabilizace kódu pomocí Unit testů v Kotest/MockK - **NA ŘADĚ**
-- [ ] Frontend pro chatování (React/Vite)
+- [x] Stabilizace kódu pomocí Unit testů v Kotest/MockK
+- [x] Implementace Chat History (perzistentní paměť konverze přes PostgreSQL) a CORS pro frontend
+- [ ] Frontend pro chatování (React/Vite) - **NA ŘADĚ**
 
 ## 🛠️ Tech Stack
 - **Backend:** Kotlin, Spring AI
