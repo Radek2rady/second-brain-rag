@@ -31,4 +31,4 @@ Content-Type: application/json
 
 ### 2. Dotaz na specifickou informaci (Chat)
 # Očekávaná odpověď by měla obsahovat příkaz 'aura-reset --force-magenta'
-GET http://localhost:8080/api/documents/chat?query=Jaký příkaz musím použít pro resetování hesla v AuraOS?
+GET http://localhost:8080/api/documents/chat?query=Co vytvořil Dr. Aris Thorne v roce 2029?&conversationId=cebcb4b9-f541-4b84-a4c6-276c52576aab
