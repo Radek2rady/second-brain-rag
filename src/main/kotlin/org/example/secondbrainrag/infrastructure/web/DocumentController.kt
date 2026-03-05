@@ -1,17 +1,21 @@
 package org.example.secondbrainrag.infrastructure.web
 
 import org.example.secondbrainrag.application.DocumentService
+import org.example.secondbrainrag.application.FileIngestionService
 import org.example.secondbrainrag.application.IngestionService
 import org.example.secondbrainrag.domain.ChatHistoryPort
 import org.example.secondbrainrag.domain.VectorDocument
 import org.example.secondbrainrag.domain.VectorDocumentPort
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 
 @RestController
 @RequestMapping("/api/documents")
 class DocumentController(
     private val documentService: DocumentService,
     private val ingestionService: IngestionService,
+    private val fileIngestionService: FileIngestionService,
     private val chatHistoryPort: ChatHistoryPort,
     private val vectorDocumentPort: VectorDocumentPort
 ) {
@@ -72,5 +76,21 @@ class DocumentController(
     fun deleteDocument(@PathVariable id: String): Map<String, String> {
         vectorDocumentPort.deleteDocument(id)
         return mapOf("status" to "success", "message" to "Document $id deleted")
+    }
+
+    @PostMapping("/upload")
+    fun uploadFile(@RequestParam("file") file: MultipartFile): ResponseEntity<Map<String, String>> {
+        return try {
+            fileIngestionService.ingestFile(file)
+            ResponseEntity.ok(mapOf(
+                "status" to "success",
+                "message" to "File '${file.originalFilename}' uploaded and ingested successfully"
+            ))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf(
+                "status" to "error",
+                "message" to (e.message ?: "Invalid file")
+            ))
+        }
     }
 }

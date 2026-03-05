@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileText } from 'lucide-react';
+import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileText, Paperclip, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -28,6 +28,11 @@ export default function App() {
   const [documents, setDocuments] = useState<VectorDocument[]>([]);
   const [isDocumentsLoading, setIsDocumentsLoading] = useState(false);
 
+  // Upload state
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // UI state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -39,9 +44,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (activeTab === 'chat') {
-      scrollToBottom();
-    }
+    if (activeTab === 'chat') scrollToBottom();
   }, [messages, isLoading, activeTab]);
 
   useEffect(() => {
@@ -53,15 +56,18 @@ export default function App() {
     fetchConversations();
   }, []);
 
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 200)}px`;
+    }
+  }, [input]);
+
   const fetchConversations = async () => {
     try {
       const res = await fetch('/api/documents/conversations');
-      if (res.ok) {
-        setConversations(await res.json());
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      if (res.ok) setConversations(await res.json());
+    } catch (e) { console.error(e); }
   };
 
   const loadConversation = async (id: string, updateState = false) => {
@@ -73,44 +79,29 @@ export default function App() {
     }
     try {
       const res = await fetch(`/api/documents/chat/history?conversationId=${id}`);
-      if (res.ok) {
-        setMessages(await res.json());
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      if (res.ok) setMessages(await res.json());
+    } catch (e) { console.error(e); }
   };
 
   const loadDocuments = async () => {
     setIsDocumentsLoading(true);
     try {
       const res = await fetch('/api/documents');
-      if (res.ok) {
-        setDocuments(await res.json());
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      if (res.ok) setDocuments(await res.json());
+    } catch (e) { console.error(e); }
     setIsDocumentsLoading(false);
   };
 
-  // When switching to knowledge tab, fetch docs
   useEffect(() => {
-    if (activeTab === 'knowledge') {
-      loadDocuments();
-    }
+    if (activeTab === 'knowledge') loadDocuments();
   }, [activeTab]);
 
   const handleDeleteDocument = async (id: string) => {
-    if (!confirm('Opravdu chceš smazat tento dokument z vektové paměti?')) return;
+    if (!confirm('Opravdu chceš smazat tento dokument?')) return;
     try {
       const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setDocuments(prev => prev.filter(d => d.id !== id));
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      if (res.ok) setDocuments(prev => prev.filter(d => d.id !== id));
+    } catch (e) { console.error(e); }
   };
 
   const handleNewChat = () => {
@@ -122,9 +113,7 @@ export default function App() {
   };
 
   const handleClearHistory = () => {
-    if (confirm('Opravdu smazat lokální historii? (Zprávy na serveru zůstanou)')) {
-      handleNewChat();
-    }
+    if (confirm('Opravdu smazat lokální historii?')) handleNewChat();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -134,24 +123,56 @@ export default function App() {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input so the same file can be re-selected
+    e.target.value = '';
+
+    setIsUploading(true);
+    setUploadStatus(`Nahrávám "${file.name}"...`);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/documents/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setUploadStatus(`✓ "${file.name}" nahrán úspěšně!`);
+        // Auto-refresh Knowledge Base if it is active
+        if (activeTab === 'knowledge') loadDocuments();
+      } else {
+        setUploadStatus(`✗ Chyba: ${data.message}`);
+      }
+    } catch (error) {
+      console.error(error);
+      setUploadStatus('✗ Chyba při nahrávání souboru.');
+    } finally {
+      setIsUploading(false);
+      setTimeout(() => setUploadStatus(null), 4000);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
     setInput('');
-    if (inputRef.current) {
-      inputRef.current.style.height = 'auto';
-    }
+    if (inputRef.current) inputRef.current.style.height = 'auto';
 
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
     try {
       const params = new URLSearchParams({ query: userMessage });
-      if (conversationId) {
-        params.append('conversationId', conversationId);
-      }
+      if (conversationId) params.append('conversationId', conversationId);
 
       const response = await fetch(`/api/documents/chat?${params.toString()}`);
       if (!response.ok) throw new Error('Network response was not ok');
@@ -168,7 +189,7 @@ export default function App() {
 
       setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
     } catch (error) {
-      console.error('Error fetching chat response:', error);
+      console.error(error);
       setMessages((prev) => [
         ...prev,
         { role: 'assistant', content: 'Omlouvám se, došlo k chybě při komunikaci se serverem.' }
@@ -180,10 +201,19 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".txt,.md"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
+
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-20 md:hidden transition-opacity"
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -221,7 +251,7 @@ export default function App() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3">
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">Historie konverzací</div>
           <div className="space-y-1">
             {conversations.length === 0 && (
@@ -271,10 +301,18 @@ export default function App() {
           </div>
         </header>
 
+        {/* Upload status toast */}
+        {uploadStatus && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-200 shadow-lg flex items-center gap-2 animate-[fadeIn_0.3s_ease-out]">
+            {isUploading && <Loader2 className="w-4 h-4 animate-spin text-blue-400" />}
+            {uploadStatus}
+          </div>
+        )}
+
         {activeTab === 'chat' ? (
           <>
             {/* Chat Area */}
-            <main className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar">
+            <main className="flex-1 overflow-y-auto scroll-smooth">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-4">
                   <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mb-6 shadow-sm border border-slate-700">
@@ -344,13 +382,28 @@ export default function App() {
                   onSubmit={handleSubmit}
                   className="relative flex items-end bg-slate-800/80 border border-slate-700 rounded-[24px] shadow-sm hover:shadow-md transition-shadow focus-within:shadow-md focus-within:border-slate-600 focus-within:bg-slate-800 overflow-hidden"
                 >
+                  {/* Paperclip upload button */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="absolute left-3 bottom-3 p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-700 rounded-full transition-colors disabled:opacity-40"
+                    title="Nahrát soubor (.txt, .md)"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                    ) : (
+                      <Paperclip className="w-5 h-5" />
+                    )}
+                  </button>
+
                   <textarea
                     ref={inputRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Message Second Brain..."
-                    className="w-full max-h-[200px] py-3.5 pl-5 pr-12 bg-transparent border-none focus:outline-none focus:ring-0 text-[15px] resize-none text-slate-200 placeholder-slate-400 disabled:opacity-50"
+                    className="w-full max-h-[200px] py-3.5 pl-12 pr-12 bg-transparent border-none focus:outline-none focus:ring-0 text-[15px] resize-none text-slate-200 placeholder-slate-400 disabled:opacity-50"
                     rows={1}
                     disabled={isLoading}
                     style={{ minHeight: '52px' }}
@@ -373,20 +426,32 @@ export default function App() {
           </>
         ) : (
           /* Knowledge Base Tab */
-          <main className="flex-1 overflow-y-auto p-6 scroll-smooth custom-scrollbar">
+          <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
             <div className="max-w-4xl mx-auto space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2">
-                  <Database className="w-5 h-5 text-blue-500" /> Dokumnety v databázi
+                  <Database className="w-5 h-5 text-blue-500" /> Dokumenty v databázi
                 </h2>
-                <div className="text-sm text-slate-400">{documents.length} chunks</div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                  >
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                    Nahrát soubor
+                  </button>
+                  <div className="text-sm text-slate-400">{documents.length} chunks</div>
+                </div>
               </div>
 
               {isDocumentsLoading ? (
-                <div className="flex items-center justify-center py-12 text-slate-400">Načítám...</div>
+                <div className="flex items-center justify-center py-12 text-slate-400">
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" /> Načítám...
+                </div>
               ) : documents.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 border border-slate-800 border-dashed rounded-xl bg-slate-900/50">
-                  Databáze je momentálně prázdná.
+                  Databáze je momentálně prázdná. Nahraj soubor pomocí tlačítka výše.
                 </div>
               ) : (
                 <div className="grid gap-4">

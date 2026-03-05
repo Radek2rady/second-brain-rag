@@ -1,6 +1,10 @@
 spring:
   application:
     name: second-brain-rag
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
   datasource:
     url: jdbc:postgresql://db.fyfvyxztprbllrhslnnj.supabase.co:5432/postgres
     username: postgres
