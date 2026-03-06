@@ -44,15 +44,25 @@ class DocumentController(
         return documentService.searchSimilar(query, topK)
     }
 
-    data class ChatResponse(val answer: String, val conversationId: String)
+    data class ChatResponse(
+        val answer: String,
+        val conversationId: String,
+        val source: String,
+        val references: List<String> = emptyList()
+    )
 
     @GetMapping("/chat")
     fun chat(
         @RequestParam query: String,
         @RequestParam(required = false) conversationId: String?
     ): ChatResponse {
-        val (activeConversationId, answer) = documentService.chat(query, conversationId)
-        return ChatResponse(answer, activeConversationId)
+        val result = documentService.chat(query, conversationId)
+        return ChatResponse(
+            answer = result.answer,
+            conversationId = result.conversationId,
+            source = result.source.name,
+            references = result.references
+        )
     }
 
     @GetMapping("/conversations")

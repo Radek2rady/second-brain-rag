@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileText, Paperclip, Loader2 } from 'lucide-react';
+import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileText, Paperclip, Loader2, Globe, HardDrive, AlertTriangle, ExternalLink, Blend } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  source?: 'LOCAL' | 'WEB' | 'HYBRID';
+  references?: string[];
 }
 
 interface VectorDocument {
@@ -14,6 +16,91 @@ interface VectorDocument {
   metadata: Record<string, string>;
 }
 
+/* ─── Source Badge Component ─── */
+function SourceBadge({ source }: { source: 'LOCAL' | 'WEB' | 'HYBRID' }) {
+  const config = {
+    LOCAL: {
+      icon: <HardDrive className="w-3 h-3" />,
+      label: 'Zdroj: Tvůj Second Brain',
+      bg: 'bg-emerald-500/15',
+      border: 'border-emerald-500/30',
+      text: 'text-emerald-400',
+      dot: 'bg-emerald-400',
+    },
+    WEB: {
+      icon: <Globe className="w-3 h-3" />,
+      label: 'Zdroj: Internet',
+      bg: 'bg-amber-500/15',
+      border: 'border-amber-500/30',
+      text: 'text-amber-400',
+      dot: 'bg-amber-400',
+    },
+    HYBRID: {
+      icon: <Blend className="w-3 h-3" />,
+      label: 'Zdroj: Second Brain + Internet',
+      bg: 'bg-blue-500/15',
+      border: 'border-blue-500/30',
+      text: 'text-blue-400',
+      dot: 'bg-blue-400',
+    },
+  };
+
+  const c = config[source];
+
+  return (
+    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${c.bg} ${c.border} ${c.text} border mb-2 animate-[fadeIn_0.3s_ease-out]`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${c.dot} animate-pulse`} />
+      {c.icon}
+      {c.label}
+    </div>
+  );
+}
+
+/* ─── Hallucination Warning Component ─── */
+function HallucinationWarning() {
+  return (
+    <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs leading-relaxed animate-[fadeIn_0.4s_ease-out] flex items-start gap-2">
+      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" />
+      <div>
+        <span className="font-semibold text-amber-400">Upozornění:</span> Tato odpověď pochází z internetu.
+        Informace nebyly ověřeny vůči tvé znalostní databázi.
+        Model může <span className="font-semibold">halucinovat</span> nebo postrádat logické uvažování — ověř si fakta z důvěryhodných zdrojů.
+      </div>
+    </div>
+  );
+}
+
+/* ─── References List Component ─── */
+function ReferencesList({ references }: { references: string[] }) {
+  if (references.length === 0) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-slate-700/50 animate-[fadeIn_0.5s_ease-out]">
+      <div className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1.5">
+        <ExternalLink className="w-3 h-3" />
+        Webové zdroje
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {references.map((url, i) => (
+          <a
+            key={i}
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-400 hover:text-blue-300 hover:underline truncate transition-colors flex items-center gap-1.5 group"
+          >
+            <span className="w-4 h-4 rounded bg-slate-700 flex items-center justify-center flex-shrink-0 text-[10px] font-medium text-slate-400 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
+              {i + 1}
+            </span>
+            <span className="truncate">{url}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main App ─── */
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'knowledge'>('chat');
 
@@ -79,7 +166,15 @@ export default function App() {
     }
     try {
       const res = await fetch(`/api/documents/chat/history?conversationId=${id}`);
-      if (res.ok) setMessages(await res.json());
+      if (res.ok) {
+        const history = await res.json();
+        // History from backend doesn't have source/references, default to LOCAL
+        setMessages(history.map((m: { role: string; content: string }) => ({
+          ...m,
+          source: 'LOCAL' as const,
+          references: [],
+        })));
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -187,7 +282,12 @@ export default function App() {
         }
       }
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: data.answer,
+        source: data.source || 'LOCAL',
+        references: data.references || [],
+      }]);
     } catch (error) {
       console.error(error);
       setMessages((prev) => [
@@ -339,21 +439,38 @@ export default function App() {
                         )}
                       </div>
 
-                      <div
-                        className={`group relative max-w-[85%] sm:max-w-[75%] px-5 py-3.5 text-[15px] leading-relaxed shadow-sm ${msg.role === 'user'
+                      <div className={`max-w-[85%] sm:max-w-[75%] ${msg.role === 'user' ? '' : 'flex flex-col'}`}>
+                        {/* Source Badge — only for assistant messages */}
+                        {msg.role === 'assistant' && msg.source && (
+                          <SourceBadge source={msg.source} />
+                        )}
+
+                        <div
+                          className={`group relative px-5 py-3.5 text-[15px] leading-relaxed shadow-sm ${msg.role === 'user'
                             ? 'bg-blue-600 text-white rounded-3xl rounded-tr-sm'
                             : 'bg-slate-800 text-slate-200 rounded-3xl rounded-tl-sm border border-slate-700/50'
-                          }`}
-                      >
-                        {msg.role === 'user' ? (
-                          <div className="whitespace-pre-wrap">{msg.content}</div>
-                        ) : (
-                          <div className="prose prose-sm sm:prose-base prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-code:text-blue-400 prose-code:bg-slate-900 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-a:text-blue-400 hover:prose-a:text-blue-300">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {msg.content}
-                            </ReactMarkdown>
-                          </div>
-                        )}
+                            }`}
+                        >
+                          {msg.role === 'user' ? (
+                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                          ) : (
+                            <div className="prose prose-sm sm:prose-base prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-code:text-blue-400 prose-code:bg-slate-900 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:before:content-none prose-code:after:content-none prose-a:text-blue-400 hover:prose-a:text-blue-300">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {msg.content}
+                              </ReactMarkdown>
+                            </div>
+                          )}
+
+                          {/* References List — inside the bubble, below text */}
+                          {msg.role === 'assistant' && msg.references && msg.references.length > 0 && (
+                            <ReferencesList references={msg.references} />
+                          )}
+
+                          {/* Hallucination Warning — inside the bubble for WEB source */}
+                          {msg.role === 'assistant' && msg.source === 'WEB' && (
+                            <HallucinationWarning />
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

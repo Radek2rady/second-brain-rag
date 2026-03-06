@@ -7,12 +7,15 @@ import org.springframework.ai.vectorstore.SearchRequest
 import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
+import org.slf4j.LoggerFactory
 
 @Component
 class VectorDocumentAdapter(
     private val vectorStore: VectorStore,
     private val jdbcTemplate: JdbcTemplate
 ) : VectorDocumentPort {
+
+    private val logger = LoggerFactory.getLogger(VectorDocumentAdapter::class.java)
 
     override fun save(documents: List<VectorDocument>) {
         saveAll(documents) // Delegating to saveAll for logic reuse
@@ -28,9 +31,19 @@ class VectorDocumentAdapter(
     }
 
     override fun searchSimilar(query: String, topK: Int): List<VectorDocument> {
-        val searchRequest = SearchRequest.builder().query(query).topK(topK).build()
+        val searchRequest = SearchRequest.builder()
+            .query(query)
+            .topK(topK)
+            .similarityThreshold(0.85)
+            .build()
         val results = vectorStore.similaritySearch(searchRequest)
-        
+
+        logger.info("searchSimilar query='{}' returned {} raw results (threshold=0.85)", query, results?.size ?: 0)
+        results?.forEachIndexed { i, doc ->
+            val score = doc.metadata?.get("distance") ?: "N/A"
+            logger.info("  result[{}]: score/distance={}, content='{}'", i, score, doc.text?.take(80) ?: "")
+        }
+
         return results?.map { doc ->
             VectorDocument(
                 id = java.util.UUID.fromString(doc.id).toString(),
