@@ -13,21 +13,21 @@ class DocumentServiceTest : BehaviorSpec({
     val chatPort = mockk<ChatPort>()
     val chatHistoryPort = mockk<ChatHistoryPort>(relaxed = true)
     val webSearchPort = mockk<WebSearchPort>()
-    val documentService = DocumentService(vectorDocumentPort, chatPort, chatHistoryPort, webSearchPort)
+    val hybridSearchService = mockk<HybridSearchService>()
+    val documentService = DocumentService(vectorDocumentPort, chatPort, chatHistoryPort, webSearchPort, hybridSearchService)
 
     Given("a DocumentService with mocked ports") {
 
         When("chat is called and LOCAL documents are found") {
             val query = "Jaké je hlavní město Francie?"
-            val expectedContext = "Paříž je hlavní město Francie.\n\nFrancie leží v Evropě."
             val expectedResponse = "Hlavním městem Francie je Paříž."
 
             every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
-            every { vectorDocumentPort.searchSimilar(query, 4) } returns listOf(
+            every { hybridSearchService.search(query) } returns listOf(
                 VectorDocument(content = "Paříž je hlavní město Francie."),
                 VectorDocument(content = "Francie leží v Evropě.")
             )
-            every { chatPort.generateResponse(query, expectedContext, emptyList(), "LOCAL") } returns expectedResponse
+            every { chatPort.generateResponse(query, any(), emptyList(), "LOCAL") } returns expectedResponse
 
             val result = documentService.chat(query, null)
 
@@ -54,7 +54,7 @@ class DocumentServiceTest : BehaviorSpec({
             val expectedResponse = "Na základě informací z internetu..."
 
             every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
-            every { vectorDocumentPort.searchSimilar(query, 4) } returns emptyList()
+            every { hybridSearchService.search(query) } returns emptyList()
             every { webSearchPort.search(query, 3) } returns listOf(
                 WebSearchResult(
                     title = "Wikipedia: kvantová gravitace",

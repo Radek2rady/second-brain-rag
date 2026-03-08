@@ -34,11 +34,11 @@ class VectorDocumentAdapter(
         val searchRequest = SearchRequest.builder()
             .query(query)
             .topK(topK)
-            .similarityThreshold(0.85)
+            .similarityThreshold(0.65)
             .build()
         val results = vectorStore.similaritySearch(searchRequest)
 
-        logger.info("searchSimilar query='{}' returned {} raw results (threshold=0.85)", query, results?.size ?: 0)
+        logger.info("searchSimilar query='{}' returned {} raw results (threshold=0.65)", query, results?.size ?: 0)
         results?.forEachIndexed { i, doc ->
             val score = doc.metadata?.get("distance") ?: "N/A"
             logger.info("  result[{}]: score/distance={}, content='{}'", i, score, doc.text?.take(80) ?: "")

@@ -305,7 +305,7 @@ export default function App() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".txt,.md"
+        accept=".txt,.md,.pdf"
         className="hidden"
         onChange={handleFileUpload}
       />
@@ -578,7 +578,19 @@ export default function App() {
                         <FileText className="w-5 h-5 text-slate-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-mono text-xs text-slate-500 mb-2 truncate">ID: {doc.id}</div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="font-mono text-xs text-slate-500 truncate">ID: {doc.id.substring(0, 8)}…</div>
+                          {(doc.metadata?.fileName || doc.metadata?.source) && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/15 border border-blue-500/30 text-blue-400">
+                              📄 {doc.metadata.fileName || doc.metadata.source}
+                            </span>
+                          )}
+                          {doc.metadata?.documentType && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-700 text-slate-400 uppercase">
+                              {doc.metadata.documentType}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-sm text-slate-300 leading-relaxed line-clamp-3">
                           {doc.content}
                         </div>

@@ -40,6 +40,9 @@ dependencies {
     // Postgres
     runtimeOnly("org.postgresql:postgresql")
     
+    // PDF parsing
+    implementation("org.apache.pdfbox:pdfbox:2.0.30")
+    
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")

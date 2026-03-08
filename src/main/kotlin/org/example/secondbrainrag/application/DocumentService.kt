@@ -10,7 +10,8 @@ class DocumentService(
     private val vectorDocumentPort: VectorDocumentPort,
     private val chatPort: ChatPort,
     private val chatHistoryPort: ChatHistoryPort,
-    private val webSearchPort: WebSearchPort
+    private val webSearchPort: WebSearchPort,
+    private val hybridSearchService: HybridSearchService
 ) {
 
     private val logger = LoggerFactory.getLogger(DocumentService::class.java)
@@ -29,8 +30,8 @@ class DocumentService(
         // 1. Retrieve history
         val history = chatHistoryPort.getLastMessages(activeConversationId, limit = 10)
 
-        // 2. Retrieve relevant local documents
-        val similarDocuments = searchSimilar(query)
+        // 2. Retrieve relevant local documents via hybrid search (vector + full-text)
+        val similarDocuments = hybridSearchService.search(query)
         val hasLocalResults = similarDocuments.isNotEmpty()
         logger.info("chat query='{}': {} local documents found (hasLocalResults={})", query, similarDocuments.size, hasLocalResults)
 
@@ -55,9 +56,12 @@ class DocumentService(
             else -> AnswerSource.LOCAL
         }
 
-        // 5. Build context
+        // 5. Build context (include metadata markers for source citation)
         val localContext = if (hasLocalResults) {
-            similarDocuments.joinToString(separator = "\n\n") { it.content }
+            similarDocuments.joinToString(separator = "\n\n") {
+                val fileInfo = it.metadata["fileName"] ?: it.metadata["source"] ?: "Neznámý soubor"
+                "--- ZDROJ: $fileInfo ---\n${it.content}"
+            }
         } else ""
 
         val webContext = if (hasWebResults) {

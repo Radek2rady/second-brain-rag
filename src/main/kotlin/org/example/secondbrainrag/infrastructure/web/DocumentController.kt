@@ -3,6 +3,7 @@ package org.example.secondbrainrag.infrastructure.web
 import org.example.secondbrainrag.application.DocumentService
 import org.example.secondbrainrag.application.FileIngestionService
 import org.example.secondbrainrag.application.IngestionService
+import org.example.secondbrainrag.application.IngestionProgressTracker
 import org.example.secondbrainrag.domain.ChatHistoryPort
 import org.example.secondbrainrag.domain.VectorDocument
 import org.example.secondbrainrag.domain.VectorDocumentPort
@@ -17,7 +18,8 @@ class DocumentController(
     private val ingestionService: IngestionService,
     private val fileIngestionService: FileIngestionService,
     private val chatHistoryPort: ChatHistoryPort,
-    private val vectorDocumentPort: VectorDocumentPort
+    private val vectorDocumentPort: VectorDocumentPort,
+    private val progressTracker: IngestionProgressTracker
 ) {
 
     data class SaveRequest(val content: String, val metadata: Map<String, String>? = null)
@@ -91,10 +93,11 @@ class DocumentController(
     @PostMapping("/upload")
     fun uploadFile(@RequestParam("file") file: MultipartFile): ResponseEntity<Map<String, String>> {
         return try {
-            fileIngestionService.ingestFile(file)
-            ResponseEntity.ok(mapOf(
-                "status" to "success",
-                "message" to "File '${file.originalFilename}' uploaded and ingested successfully"
+            val jobId = fileIngestionService.ingestFile(file)
+            ResponseEntity.accepted().body(mapOf(
+                "status" to "processing",
+                "jobId" to jobId,
+                "message" to "Soubor '${file.originalFilename}' se zpracovává na pozadí. Sledujte průběh přes /api/documents/upload/status/$jobId"
             ))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf(
@@ -103,4 +106,26 @@ class DocumentController(
             ))
         }
     }
+
+    @GetMapping("/upload/status/{jobId}")
+    fun getUploadStatus(@PathVariable jobId: String): ResponseEntity<Any> {
+        val status = progressTracker.getStatus(jobId)
+            ?: return ResponseEntity.notFound().build()
+
+        return ResponseEntity.ok(mapOf(
+            "jobId" to status.jobId,
+            "fileName" to status.fileName,
+            "status" to status.status,
+            "totalChunks" to status.totalChunks,
+            "processedChunks" to status.processedChunks,
+            "progressPercent" to status.progressPercent,
+            "errorMessage" to (status.errorMessage ?: "")
+        ))
+    }
+
+    @GetMapping("/upload/status")
+    fun getAllUploadStatuses(): List<IngestionProgressTracker.IngestionStatus> {
+        return progressTracker.getAllJobs()
+    }
 }
+

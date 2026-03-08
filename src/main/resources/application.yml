@@ -3,8 +3,13 @@ spring:
     name: second-brain-rag
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 5MB
+      max-file-size: 50MB
+      max-request-size: 50MB  
+
+  mvc:
+    async:
+      request-timeout: 3600000 # 1 hour for long embedding processes
+
   datasource:
     url: jdbc:postgresql://db.fyfvyxztprbllrhslnnj.supabase.co:5432/postgres
     username: postgres
@@ -26,6 +31,11 @@ spring:
     vectorstore:
       pgvector:
         initialize-schema: true
+
+server:
+  tomcat:
+    connection-timeout: 3600000 # 1 hour
+    max-swallow-size: 50MB
 
 logging:
   level:
