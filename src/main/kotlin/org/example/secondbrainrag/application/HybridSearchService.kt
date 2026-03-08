@@ -9,7 +9,8 @@ import org.slf4j.LoggerFactory
 @Service
 class HybridSearchService(
     private val vectorDocumentPort: VectorDocumentPort,
-    private val fullTextSearchPort: FullTextSearchPort
+    private val fullTextSearchPort: FullTextSearchPort,
+    private val legalQueryExpander: LegalQueryExpander
 ) {
 
     private val logger = LoggerFactory.getLogger(HybridSearchService::class.java)
@@ -20,10 +21,12 @@ class HybridSearchService(
      * Performs hybrid search combining vector similarity and full-text search.
      * Always runs both search methods simultaneously and deduplicates their results.
      */
-    fun search(query: String, topK: Int = 5): List<VectorDocument> {
-        logger.info("Performing hybrid search for query='{}'", query)
-        val ftResults = fullTextSearchPort.searchByKeyword(query, topK)
-        val vectorResults = vectorDocumentPort.searchSimilar(query, topK)
+    fun search(query: String, topK: Int = 15): List<VectorDocument> {
+        val expandedQuery = legalQueryExpander.expandQuery(query)
+        logger.info("Performing hybrid search for expandedQuery='{}' (original='{}')", expandedQuery, query)
+
+        val ftResults = fullTextSearchPort.searchByKeyword(expandedQuery, topK)
+        val vectorResults = vectorDocumentPort.searchSimilar(expandedQuery, topK)
 
         logger.info("Hybrid search: {} full-text results, {} vector results", ftResults.size, vectorResults.size)
 
@@ -45,7 +48,8 @@ class HybridSearchService(
             }
         }
 
-        logger.info("Hybrid merged total: {} unique results", merged.size)
-        return merged
+        val finalResults = merged.take(topK)
+        logger.info("Hybrid merged total: {} unique results (trimmed to topK={})", finalResults.size, topK)
+        return finalResults
     }
 }

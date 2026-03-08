@@ -1,6 +1,6 @@
 # 🧠 Second Brain RAG
 
-> **Tvůj osobní AI asistent, který odpovídá výhradně z tvých vlastních dokumentů.**
+> **Your personal AI assistant that answers exclusively from your own documents.**
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot)
@@ -8,85 +8,85 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![Supabase](https://img.shields.io/badge/Supabase-pgvector-3ECF8E?logo=supabase)](https://supabase.com/)
 
-Second Brain RAG je full-stack **Retrieval-Augmented Generation** aplikace. Nahraj své dokumenty (`.txt`, `.md`), a AI ti z nich bude odpovídat — s historií konverzací a vlastním vektorovým vyhledáváním.
+Second Brain RAG is a full-stack **Retrieval-Augmented Generation** application. Upload your documents (`.txt`, `.md`, `.pdf`), and the AI will answer your questions based on them — featuring conversation history and a custom advanced vector search pipeline.
 
 ---
 
-## ✨ Klíčové funkce
+## ✨ Key Features
 
-| Funkce | Popis |
+| Feature | Description |
 |--------|-------|
-| 🔍 **Sémantické vyhledávání** | Dokumenty se ukládají jako vektory (pgvector) a vyhledávají se podle významové podobnosti |
-| 💬 **RAG Chat** | LLM (GPT-4o) odpovídá **pouze** na základě tvého kontextu — žádné halucinace |
-| 📝 **Chat History** | Perzistentní paměť konverzací uložená v PostgreSQL |
-| 📎 **File Upload** | Nahrávání `.txt` a `.md` souborů s automatickým chunkingem (max 5 MB) |
-| 🗑️ **Knowledge Management** | Prohlížení a mazání dokumentů přímo z UI |
-| 🌙 **Dark Mode UI** | Moderní React frontend ve stylu ChatGPT |
+| 🔍 **Hybrid Semantic Search** | Documents are stored as vectors (pgvector) and text representations. Searches use a unique combination of LLM Query Expansion, Vector Similarity, and Exact Match Full-Text. |
+| 💬 **RAG Chat** | The LLM (GPT-4o) responds **only** based on your context — zero hallucinations. |
+| 📝 **Chat History** | Persistent conversation memory stored in PostgreSQL. |
+| 📎 **File Upload** | Upload `.txt`, `.md`, and `.pdf` files with automatic normalization and chunking. |
+| 🗑️ **Knowledge Management** | View and manage indexed documents directly from the UI. |
+| 🌙 **Dark Mode UI** | Modern React frontend inspired by ChatGPT. |
 
 ---
 
-## 🏗️ Architektura
+## 🏗️ Architecture
 
-Projekt striktně dodržuje **Hexagonální architekturu** (Ports & Adapters):
+The project strictly follows **Hexagonal Architecture** (Ports & Adapters):
 
 ```
 src/main/kotlin/
-├── domain/              ← Jádro: modely + rozhraní (porty)
+├── domain/              ← Core: models + interfaces (ports)
 │   ├── VectorDocument, ChatMessage
 │   ├── VectorDocumentPort, ChatPort
 │   ├── ChatHistoryPort, DocumentSplitterPort
 │
-├── application/         ← Use Cases: orchestrace business logiky
+├── application/         ← Use Cases: business logic orchestration
 │   ├── DocumentService        (RAG: retrieve → generate → save history)
-│   ├── IngestionService       (chunking + bulk save)
-│   └── FileIngestionService   (validace souboru + delegace)
+│   ├── HybridSearchService    (Parallel Vector + FullText execution)
+│   └── LegalQueryExpander     (LLM-based precise semantic translator)
 │
-└── infrastructure/      ← Adaptéry: Spring AI, JPA, REST
+└── infrastructure/      ← Adapters: Spring AI, JPA, REST
     ├── SpringAiChatAdapter          (ChatClient → GPT-4o)
     ├── VectorDocumentAdapter        (pgvector VectorStore)
-    ├── JpaChatHistoryAdapter        (JPA → chat_messages)
-    ├── SpringAiDocumentSplitterAdapter
+    ├── FullTextSearchAdapter        (PostgreSQL tsvector & ILIKE)
     └── web/
         ├── DocumentController       (REST API)
         └── WebConfig                (CORS)
 ```
 
-**Proč?** Domain vrstva nemá žádnou závislost na Spring AI, JPA ani webu → snadné testování, snadná výměna LLM providera.
+**Why?** The Domain layer has zero dependencies on Spring AI, JPA, or the web framework → enabling effortless testing and easy swapping of the LLM provider.
+*For a detailed look at the RAG Search Pipeline, see [ARCHITECTURE.md](ARCHITECTURE.md).*
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Vrstva | Technologie |
+| Layer | Technology |
 |--------|------------|
 | **Backend** | Kotlin 2.1, Spring Boot 3.4, Spring AI 1.0-M6 |
-| **LLM** | OpenAI GPT-4o (přes `ChatClient`) |
-| **Vektorová DB** | Supabase PostgreSQL + pgvector |
+| **LLM** | OpenAI GPT-4o (via `ChatClient`) |
+| **Vector DB** | Supabase PostgreSQL + pgvector |
 | **Frontend** | React 19, TypeScript, Vite 7, Tailwind CSS 4 |
-| **Testování** | Kotest (BehaviorSpec) + MockK |
+| **Testing** | Kotest (BehaviorSpec) + MockK |
 
 ---
 
-## 🚀 Spuštění
+## 🚀 How to Run
 
-### Prerekvizity
+### Prerequisites
 - Java 21+
 - Node.js 20+
-- Účet na [Supabase](https://supabase.com/) s povoleným pgvector rozšířením
-- OpenAI API klíč
+- A [Supabase](https://supabase.com/) account with the pgvector extension enabled
+- OpenAI API key
 
 ### 1. Backend
 
 ```bash
-# Nastav env proměnné
-export DB_BRAIN_RAG_PASSWORD=tvoje_supabase_heslo
+# Set environment variables
+export DB_BRAIN_RAG_PASSWORD=your_supabase_password
 export OPENAI_API_KEY=sk-...
 
-# Spusť Spring Boot
+# Run Spring Boot
 ./gradlew bootRun
 ```
 
-Backend poběží na `http://localhost:8080`.
+The Backend will run on `http://localhost:8080`.
 
 ### 2. Frontend
 
@@ -96,58 +96,35 @@ npm install
 npm run dev
 ```
 
-Frontend poběží na `http://localhost:5173` s automatickým proxy na backend.
+The Frontend will run on `http://localhost:5173` with an automatic proxy to the backend.
 
 ---
 
 ## 📡 REST API
 
-| Metoda | Endpoint | Popis |
-|--------|----------|-------|
-| `POST` | `/api/documents` | Uložení dokumentu |
-| `POST` | `/api/documents/ingest` | Ingestování textu s chunkingem |
-| `POST` | `/api/documents/upload` | Upload `.txt`/`.md` souboru |
-| `GET` | `/api/documents` | Seznam všech dokumentů |
-| `DELETE` | `/api/documents/{id}` | Smazání dokumentu |
-| `GET` | `/api/documents/search?query=...` | Sémantické vyhledávání |
-| `GET` | `/api/documents/chat?query=...&conversationId=...` | RAG chat |
-| `GET` | `/api/documents/conversations` | Seznam konverzací |
-| `GET` | `/api/documents/chat/history?conversationId=...` | Historie konverzace |
+For full API documentation, see [API_DOCS.md](API_DOCS.md).
 
 ---
 
-## 🧪 Testy
+## 🧪 Tests
 
 ```bash
 ./gradlew test
 ```
 
-Unit testy pokrývají orchestraci v aplikační vrstvě:
-- **`DocumentServiceTest`** — mockování portů, ověření RAG flow
-- **`IngestionServiceTest`** — ověření chunkingu a bulk uložení
+Unit tests cover application layer orchestration:
+- **`DocumentServiceTest`** — Port mocking, RAG flow verification.
+- **`HybridSearchServiceTest`** — Parallel full-text and vector fallback/merge logic verification.
+- **`IngestionServiceTest`** — Chunking and bulk save verification.
 
 ---
 
-## 📁 Struktura projektu
+## 📜 License
 
-```
-second-brain-rag/
-├── src/main/kotlin/...     # Kotlin backend (Hexagonální architektura)
-├── src/test/kotlin/...     # Kotest + MockK testy
-├── frontend/               # React + Vite + Tailwind CSS 4
-├── ARCHITECTURE.md         # Popis architektonických rozhodnutí
-├── MISSION_CONTROL.md      # Interní tracker stavu projektu
-└── build.gradle.kts        # Gradle Kotlin DSL
-```
-
----
-
-## 📜 Licence
-
-Tento projekt je vytvořen pro osobní učení a experimentování s RAG architekturou.
+This project was created for personal learning and experimentation with advanced RAG architectures.
 
 ---
 
 <p align="center">
-  <em>Vytvořeno s ❤️, Kotlinem a trochou AI magie.</em>
+  <em>Built with ❤️, Kotlin, and a touch of AI magic.</em>
 </p>

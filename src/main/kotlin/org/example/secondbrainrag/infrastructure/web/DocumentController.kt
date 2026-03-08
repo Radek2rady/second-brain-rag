@@ -42,7 +42,7 @@ class DocumentController(
     }
 
     @GetMapping("/search")
-    fun search(@RequestParam query: String, @RequestParam(defaultValue = "4") topK: Int): List<VectorDocument> {
+    fun search(@RequestParam query: String, @RequestParam(defaultValue = "15") topK: Int): List<VectorDocument> {
         return documentService.searchSimilar(query, topK)
     }
 
@@ -97,7 +97,7 @@ class DocumentController(
             ResponseEntity.accepted().body(mapOf(
                 "status" to "processing",
                 "jobId" to jobId,
-                "message" to "Soubor '${file.originalFilename}' se zpracovává na pozadí. Sledujte průběh přes /api/documents/upload/status/$jobId"
+                "message" to "File '${file.originalFilename}' is being processed in the background. Track progress via /api/documents/upload/status/$jobId"
             ))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf(

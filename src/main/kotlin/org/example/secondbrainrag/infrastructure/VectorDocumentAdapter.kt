@@ -8,6 +8,8 @@ import org.springframework.ai.vectorstore.VectorStore
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import org.slf4j.LoggerFactory
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 
 @Component
 class VectorDocumentAdapter(
@@ -16,6 +18,7 @@ class VectorDocumentAdapter(
 ) : VectorDocumentPort {
 
     private val logger = LoggerFactory.getLogger(VectorDocumentAdapter::class.java)
+    private val objectMapper = jacksonObjectMapper()
 
     override fun save(documents: List<VectorDocument>) {
         saveAll(documents) // Delegating to saveAll for logic reuse
@@ -34,14 +37,14 @@ class VectorDocumentAdapter(
         val searchRequest = SearchRequest.builder()
             .query(query)
             .topK(topK)
-            .similarityThreshold(0.65)
+            .similarityThreshold(0.60)
             .build()
         val results = vectorStore.similaritySearch(searchRequest)
 
-        logger.info("searchSimilar query='{}' returned {} raw results (threshold=0.65)", query, results?.size ?: 0)
+        logger.info("searchSimilar query='{}' returned {} raw results (threshold=0.60)", query, results?.size ?: 0)
         results?.forEachIndexed { i, doc ->
             val score = doc.metadata?.get("distance") ?: "N/A"
-            logger.info("  result[{}]: score/distance={}, content='{}'", i, score, doc.text?.take(80) ?: "")
+            logger.info("  result[{}]: score/distance={}, content='{}'", i, score, doc.text?.take(250) ?: "")
         }
 
         return results?.map { doc ->
@@ -60,13 +63,20 @@ class VectorDocumentAdapter(
             // We'll deserialize metadata manually if needed, but for the UI we might only need id and content or minimal metadata.
             val id = rs.getString("id") ?: ""
             val content = rs.getString("content") ?: ""
-            // metadata fallback is to just store the raw JSON string in our Map
+            
+            // Fix: Deserialize metadata
             val metadataStr = rs.getString("metadata") ?: "{}"
+            val parsedMetadata = try {
+                objectMapper.readValue<Map<String, String>>(metadataStr)
+            } catch (e: Exception) {
+                logger.warn("Failed to parse metadata JSON in getAlLDuruments: {}", metadataStr)
+                mapOf("raw" to metadataStr)
+            }
             
             VectorDocument(
                 id = id,
                 content = content,
-                metadata = mapOf("raw" to metadataStr) // Simple wrapping
+                metadata = parsedMetadata
             )
         }
     }

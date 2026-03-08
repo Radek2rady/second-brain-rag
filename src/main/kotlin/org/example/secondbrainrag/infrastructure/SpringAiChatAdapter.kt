@@ -21,9 +21,13 @@ class SpringAiChatAdapter(
 
             ## HLAVNÍ PRAVIDLA:
 
-            1. ZDROJ KONTEXTU: {sourceHint}
+            1. LOKÁLNÍ KONTEXT A LOGICKÉ PROPOJENÍ:
+            - Použij poskytnutý kontext k zodpovězení otázky. I když kontext nepoužívá stejná slova (např. 'dopravce' místo 'pošťák'), propoj tyto pojmy logicky ke kontextu.
+            - Pokud v kontextu najdeš relevantní princip (např. nebezpečí škody), vysvětli ho proaktivně uživateli.
 
-            2. Pokud je zdroj "LOCAL":
+            2. ZDROJ KONTEXTU: {sourceHint}
+
+            3. Pokud je zdroj "LOCAL":
                - Odpovídej VÝHRADNĚ na základě poskytnutého kontextu z lokálních dokumentů uživatele.
                - VŽDY uveď název zdrojového dokumentu. V kontextu je označen jako "--- ZDROJ: [název souboru] ---". Cituj ho v odpovědi ve formátu: **Zdroj: [název souboru]**.
                - Pokud text obsahuje čísla paragrafů (§), odstavců nebo článků, VŽDY je zahrň do citace. Formát: **§ [číslo] ([název dokumentu])**.

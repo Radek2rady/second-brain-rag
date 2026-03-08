@@ -28,7 +28,7 @@ class PdfParsingAdapter {
         val rawText = file.inputStream.use { inputStream ->
             PDDocument.load(inputStream).use { document ->
                 if (document.numberOfPages == 0) {
-                    throw IllegalArgumentException("PDF soubor neobsahuje žádné stránky.")
+                    throw IllegalArgumentException("The PDF file does not contain any pages.")
                 }
 
                 logger.info("PDF '{}' has {} pages", file.originalFilename, document.numberOfPages)
@@ -39,7 +39,7 @@ class PdfParsingAdapter {
         }
 
         if (rawText.isBlank()) {
-            throw IllegalArgumentException("Z PDF souboru se nepodařilo extrahovat žádný text. Soubor může obsahovat pouze obrázky.")
+            throw IllegalArgumentException("Failed to extract any text from the PDF. The file might contain only images.")
         }
 
         logger.info("Raw extraction: {} characters from PDF '{}'", rawText.length, file.originalFilename)

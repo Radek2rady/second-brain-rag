@@ -6,6 +6,8 @@ import org.example.secondbrainrag.domain.VectorDocument
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import org.slf4j.LoggerFactory
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 
 @Component
 class FullTextSearchAdapter(
@@ -13,6 +15,7 @@ class FullTextSearchAdapter(
 ) : FullTextSearchPort {
 
     private val logger = LoggerFactory.getLogger(FullTextSearchAdapter::class.java)
+    private val objectMapper = jacksonObjectMapper()
 
     companion object {
         private val PARAGRAPH_REGEX = Regex("""§\s*\d+\w*""")
@@ -106,10 +109,18 @@ class FullTextSearchAdapter(
         """.trimIndent()
 
         val results = jdbcTemplate.query(sql, { rs, _ ->
+            val metadataStr = rs.getString("metadata") ?: "{}"
+            val parsedMetadata = try {
+                objectMapper.readValue<Map<String, String>>(metadataStr)
+            } catch (e: Exception) {
+                logger.warn("Failed to parse metadata JSON: {}", metadataStr)
+                mapOf("raw" to metadataStr)
+            }
+
             VectorDocument(
                 id = rs.getString("id") ?: "",
                 content = rs.getString("content") ?: "",
-                metadata = mapOf("raw" to (rs.getString("metadata") ?: "{}"))
+                metadata = parsedMetadata
             )
         }, tsQuery, tsQuery, topK)
 
@@ -125,45 +136,69 @@ class FullTextSearchAdapter(
     }
 
     /**
-     * Fallback search using ILIKE for exact substring matching.
-     * Handles § spacing variations: "§ 2165", "§2165", "§  2165" all match.
+     * Fallback search using ILIKE for substring matching.
+     * Generates an OR-based SQL query utilizing up to the first 3 keywords to maximize recall.
      */
     private fun searchByIlike(query: String, topK: Int): List<VectorDocument> {
-        // Build a pattern resilient to spacing between § and number
-        val likePattern = buildIlikePattern(query)
+        val tokens = query.split(",")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .take(3)
+
+        if (tokens.isEmpty()) {
+            logger.warn("No valid tokens found for ILIKE fallback, returning empty list.")
+            return emptyList()
+        }
+
+        // Build dynamic OR clause for up to 3 tokens
+        val whereClause = tokens.joinToString(" OR ") { "content ILIKE ?" }
+        val likePatterns = tokens.map { buildIlikePattern(it) }
+
         val sql = """
             SELECT id, content, metadata
             FROM vector_store
-            WHERE content ILIKE ?
+            WHERE $whereClause
             LIMIT ?
         """.trimIndent()
 
+        // Prepare arguments: dynamic parameters followed by topK limit
+        val args = likePatterns.toMutableList<Any>()
+        args.add(topK)
+
         val results = jdbcTemplate.query(sql, { rs, _ ->
+            val metadataStr = rs.getString("metadata") ?: "{}"
+            val parsedMetadata = try {
+                objectMapper.readValue<Map<String, String>>(metadataStr)
+            } catch (e: Exception) {
+                logger.warn("Failed to parse metadata JSON: {}", metadataStr)
+                mapOf("raw" to metadataStr)
+            }
+
             VectorDocument(
                 id = rs.getString("id") ?: "",
                 content = rs.getString("content") ?: "",
-                metadata = mapOf("raw" to (rs.getString("metadata") ?: "{}"))
+                metadata = parsedMetadata
             )
-        }, likePattern, topK)
+        }, *args.toTypedArray())
 
-        logger.info("ILIKE fallback returned {} results for pattern='{}'", results.size, likePattern)
+        logger.info("ILIKE fallback returned {} results for tokens={} using patterns={}", results.size, tokens, likePatterns)
         return results
     }
 
     /**
-     * Builds an ILIKE pattern that is resilient to whitespace variations.
-     * "§ 2165" → "%§%2165%" (matches "§2165", "§ 2165", "§  2165")
+     * Builds an ILIKE pattern highly resilient to whitespace variations.
+     * "§ 2165" → "%§%2165%"
      */
-    private fun buildIlikePattern(query: String): String {
-        // Split the query into meaningful tokens, use % between each for flexible matching
-        val tokens = query.trim()
+    private fun buildIlikePattern(keyword: String): String {
+        // Split by whitespace and wrap with %
+        val tokens = keyword.trim()
             .split(Regex("\\s+"))
             .filter { it.isNotBlank() }
 
         return if (tokens.size > 1) {
             "%" + tokens.joinToString("%") + "%"
         } else {
-            "%${query.trim()}%"
+            "%${keyword.trim()}%"
         }
     }
 
@@ -197,7 +232,8 @@ class FullTextSearchAdapter(
 
         if (expandedTokens.isEmpty()) return ""
 
-        // Join with & for AND semantics
-        return expandedTokens.joinToString(" & ")
+        // Join with | for OR semantics.
+        // The SQL query already uses ts_rank(content_tsv, to_tsquery(...)) DESC to prioritize chunks containing MORE of these terms.
+        return expandedTokens.joinToString(" | ")
     }
 }
