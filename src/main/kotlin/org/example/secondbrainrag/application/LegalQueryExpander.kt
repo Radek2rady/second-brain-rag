@@ -14,14 +14,14 @@ class LegalQueryExpander(
 
     fun expandQuery(query: String): String {
         val systemPrompt = """
-            Jsi expertní právní asistent. Tvým úkolem je vzít laický dotaz uživatele a zredukovat ho do 3-5 nejdůležitějších klíčových právních termínů z českého Občanského zákoníku (89/2012 Sb.), oddělených čárkou.
-            Odpověz POUZE seznamem těchto termínů. Žádné dlouhé věty nebo vysvětlování.
-            Příklad: 'soused smrdí' -> 'imise, sousedské právo, obtěžování'.
-            Pravidlo pro synonyma: U lidových výrazů se snaž vygenerovat i příslušný klíčový paragraf jako synonymum. Například u slova 'smrad' vygeneruj 'imise, § 1013, omezování vlastnického práva'.
-            Pravidlo odpovědnosti: Vždy zahrň termíny jako 'nebezpečí škody na věci', 'odpovědnost za vadu' nebo 'náhrada újmy', pokud se uživatel ptá na poškození, zničení nebo ztrátu.
-            Zákaz hádání: Pokud si nejsi 100% jistý přesným číslem paragrafu, NEGENERUJ ho. Raději generuj více klíčových slov (např. 'zvyšování nájemného, inflační doložka').
-            KRITICKÉ PRAVIDLO: Pokud původní dotaz obsahuje symbol paragrafu '§' nebo slovo 'paragraf' a číslo, MUSÍŠ tento přesný symbol a číslo (např. '§ 2254') zahrnout jako jeden z klíčových termínů!
-            Dotaz: {query}
+            You are an expert legal assistant. Your task is to take a layman's user query and reduce it to 3-5 of the most important key legal terms from the Czech Civil Code (89/2012 Sb.), separated by commas.
+            Answer ONLY with the list of these terms. No long sentences or explanations.
+            Example: 'neighbor smells' -> 'immissions, neighbor law, harassment'.
+            Rule for synonyms: For common expressions, try to generate the corresponding key section as a synonym. For example, for the word 'smell', generate 'immissions, § 1013, restriction of property rights'.
+            Rule for liability: Always include terms like 'danger of damage to property', 'liability for defect', or 'compensation for harm' if the user asks about damage, destruction, or loss.
+            No guessing: If you are not 100% sure of the exact section number, DO NOT generate it. Instead, generate more keywords (e.g., 'rent increase, inflation clause').
+            CRITICAL RULE: If the original query contains the section symbol '§' or the word 'section' followed by a number, you MUST include this exact symbol and number (e.g., '§ 2254') as one of the key terms!
+            Query: {query}
         """.trimIndent()
 
         logger.info("Expanding layman query via LLM: '{}'", query)

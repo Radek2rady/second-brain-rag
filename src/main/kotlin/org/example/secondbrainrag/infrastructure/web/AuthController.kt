@@ -25,9 +25,6 @@ class AuthController(
 
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): Map<String, Any> {
-        val encoder = org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder()
-        println("DEBUG: Nový hash pro 'password': " + encoder.encode("password"))
-
         val auth: Authentication = authenticationManager.authenticate(
             UsernamePasswordAuthenticationToken(request.username, request.password ?: "")
         )

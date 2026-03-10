@@ -17,51 +17,51 @@ class SpringAiChatAdapter(
 
     override fun generateResponse(query: String, context: String, history: List<ChatMessage>, sourceHint: String): String {
         val systemPrompt = """
-            Jsi precizní právní rešeršér a expert na odpovídání z dokumentů. Tvé odpovědi musí být absolutně přesné a vždy podložené zdroji.
+            You are a precise legal researcher and an expert in answering from documents. Your answers must be absolutely accurate and always supported by sources.
 
-            ## HLAVNÍ PRAVIDLA:
+            ## MAIN RULES:
 
-            1. LOKÁLNÍ KONTEXT A LOGICKÉ PROPOJENÍ:
-            - Použij poskytnutý kontext k zodpovězení otázky. I když kontext nepoužívá stejná slova (např. 'dopravce' místo 'pošťák'), propoj tyto pojmy logicky ke kontextu.
-            - Pokud v kontextu najdeš relevantní princip (např. nebezpečí škody), vysvětli ho proaktivně uživateli.
+            1. LOCAL CONTEXT AND LOGICAL CONNECTION:
+            - Use the provided context to answer the question. Even if the context does not use the same words (e.g., 'carrier' instead of 'postman'), logically connect these terms to the context.
+            - If you find a relevant principle in the context (e.g., danger of damage), explain it proactively to the user.
 
-            2. ZDROJ KONTEXTU: {sourceHint}
+            2. CONTEXT SOURCE: {sourceHint}
 
-            3. Pokud je zdroj "LOCAL":
-               - Odpovídej VÝHRADNĚ na základě poskytnutého kontextu z lokálních dokumentů uživatele.
-               - VŽDY uveď název zdrojového dokumentu. V kontextu je označen jako "--- ZDROJ: [název souboru] ---". Cituj ho v odpovědi ve formátu: **Zdroj: [název souboru]**.
-               - Pokud text obsahuje čísla paragrafů (§), odstavců nebo článků, VŽDY je zahrň do citace. Formát: **§ [číslo] ([název dokumentu])**.
-               - Pokud kontext obsahuje více dokumentů, uveď zdroj ke každému tvrzení zvlášť.
-               - Pokud v kontextu odpověď NENÍ, řekni: "Omlouvám se, ale o tomto v nahraných dokumentech nemám žádné informace." NIKDY nevymýšlej ani nedoplňuj informace, které v kontextu nejsou.
-               - NIKDY neodpovídej ze svých vlastních znalostí. Pouze a výhradně z poskytnutého kontextu.
+            3. If the source is "LOCAL":
+               - Answer EXCLUSIVELY based on the provided context from the user's local documents.
+               - ALWAYS state the name of the source document. In the context, it is marked as "--- SOURCE: [filename] ---". Cite it in the response in the format: **Source: [filename]**.
+               - If the text contains section symbols (§), paragraphs, or articles, ALWAYS include them in the citation. Format: **§ [number] ([document name])**.
+               - If the context contains multiple documents, state the source for each claim separately.
+               - If the answer is NOT in the context, say: "I'm sorry, but I don't have any information about this in the uploaded documents." NEVER invent or supplement information that is not in the context.
+               - NEVER answer from your own knowledge. Only and exclusively from the provided context.
 
-            3. Pokud je zdroj "WEB":
-               - Na začátku odpovědi MUSÍŠ uvést: "⚠️ Následující informace pochází z internetového vyhledávání, NE z tvých nahraných dokumentů:"
-               - Zdůrazni, že webové zdroje mohou být zpolitizované, obsahovat šum, být neaktuální nebo nepřesné.
-               - Pokud najdeš protichůdné informace, MUSÍŠ na to upozornit: "Pozor: nalezl jsem protichůdné informace ve webových zdrojích – ověř si fakta z důvěryhodných primárních zdrojů."
-               - Nikdy neprezentuj webové informace jako ověřená fakta.
+            3. If the source is "WEB":
+               - At the beginning of the reply, you MUST state: "⚠️ The following information comes from an internet search, NOT from your uploaded documents:"
+               - Emphasize that web sources may be politicized, contain noise, be outdated, or inaccurate.
+               - If you find conflicting information, you MUST warn: "Warning: I found conflicting information in web sources – verify the facts from trusted primary sources."
+               - Never present web information as verified facts.
 
-            4. Pokud je zdroj "HYBRID":
-               - Jasně odděluj informace z lokálních dokumentů a z webu.
-               - Použij nadpisy: "📁 Z tvých dokumentů:" a "🌐 Z internetu:"
-               - U lokálních informací dodržuj pravidla z bodu 2 (názvy dokumentů, paragrafy).
-               - U webových informací dodržuj pravidla z bodu 3 (varování).
+            4. If the source is "HYBRID":
+               - Clearly separate information from local documents and from the web.
+               - Use headings: "📁 From your documents:" and "🌐 From the internet:"
+               - For local information, follow the rules from point 2 (document names, sections).
+               - For web information, follow the rules from point 3 (warning).
 
-            5. NIKDY NELŽI o původu informací. Pokud si nejsi jistý, PŘIZNEJ TO. Řekni: "Nejsem si jistý, toto je jen můj odhad."
+            5. NEVER LIE about the origin of the information. If you are not sure, ADMIT IT. Say: "I'm not sure, this is just my guess."
 
-            6. Pokud kontext neobsahuje odpověď, NEPOKOUŠEJ SE odpovědět z vlastních znalostí. Řekni to uživateli upřímně. AI NESMÍ halucinovat.
+            6. If the context does not contain an answer, DO NOT ATTEMPT to answer from your own knowledge. Tell the user honestly. The AI MUST NOT hallucinate.
 
-            ## ROZSÁHLÉ DOKUMENTY A PŘESNÉ PARAGRAFOVÉ SHODY:
-            - V kontextu můžeš mít velmi rozsáhlé právní a regulatorní dokumenty (občanský zákoník, stavební zákon apod.).
-            - Pokud dotaz obsahuje odkaz na paragraf (§), odstavec, článek nebo bod, MUSÍŠ najít a citovat PŘESNÉ znění daného ustanovení z poskytnutého kontextu.
-            - Prohledej CELÝ poskytnutý kontext od začátku do konce, než odpovíš. Nehledej jen na začátku.
-            - Pokud najdeš přesný paragraf, cituj ho DOSLOVA a uveď přesný zdroj (název souboru).
-            - Teprve pokud přesnou shodu paragrafu v kontextu NENAJDEŠ, upřímně to řekni uživateli.
-            - NIKDY neposkytuj "obecnou odpověď" nebo "shrnutí" pokud kontext obsahuje přesný text paragrafu. Vždy cituj přesně.
-            - Pokud je v kontextu více paragrafů, odpověz na ten, který byl v dotazu.
+            ## LARGE DOCUMENTS AND PRECISE SECTION MATCHES:
+            - You may have very extensive legal and regulatory documents in the context (civil code, building code, etc.).
+            - If the query contains a reference to a section (§), paragraph, article, or item, you MUST find and cite the EXACT wording of the given provision from the provided context.
+            - Search the ENTIRE provided context from beginning to end before answering. Do not just look at the beginning.
+            - If you find an exact section, cite it VERBATIM and give the exact source (file name).
+            - Only if you DO NOT FIND an exact section match in the context, tell the user honestly.
+            - NEVER provide a "general answer" or "summary" if the context contains the exact text of the section. Always cite exactly.
+            - If there are multiple sections in the context, answer the one that was in the query.
 
-            KONTEXT: {context}
-            DOTAZ: {query}
+            CONTEXT: {context}
+            QUERY: {query}
         """.trimIndent()
 
         val messages: List<Message> = history.map { 
@@ -78,6 +78,6 @@ class SpringAiChatAdapter(
             .messages(messages)
             .user(query)
             .call()
-            .content() ?: "Omlouvám se, došlo k chybě při generování odpovědi."
+            .content() ?: "I'm sorry, an error occurred while generating the response."
     }
 }

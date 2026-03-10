@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, ShieldAlert, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface AuditEvent {
@@ -58,7 +58,7 @@ export default function AuditLogs({ token }: AuditLogsProps) {
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
                 <h2 className="font-semibold text-slate-200">Audit Dashboard</h2>
                 <div className="text-sm text-slate-400">
-                    Celkem záznamů: {data?.totalElements || 0}
+                    Total records: {data?.totalElements || 0}
                 </div>
             </div>
 
@@ -66,10 +66,10 @@ export default function AuditLogs({ token }: AuditLogsProps) {
                 <table className="w-full text-sm text-left">
                     <thead className="text-xs text-slate-400 uppercase bg-slate-800/50 border-b border-slate-700">
                         <tr>
-                            <th className="px-4 py-3">Čas</th>
-                            <th className="px-4 py-3">Uživatel</th>
-                            <th className="px-4 py-3">Akce</th>
-                            <th className="px-4 py-3">Detaily</th>
+                            <th className="px-4 py-3">Time</th>
+                            <th className="px-4 py-3">User</th>
+                            <th className="px-4 py-3">Action</th>
+                            <th className="px-4 py-3">Details</th>
                             <th className="px-4 py-3 text-right">Status</th>
                         </tr>
                     </thead>
@@ -78,13 +78,13 @@ export default function AuditLogs({ token }: AuditLogsProps) {
                             <tr>
                                 <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                                     <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                                    Načítám logy...
+                                    Loading logs...
                                 </td>
                             </tr>
                         ) : data?.content.length === 0 ? (
                             <tr>
                                 <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                                    Zatím žádné auditní záznamy.
+                                    No audit records found.
                                 </td>
                             </tr>
                         ) : (
@@ -125,7 +125,7 @@ export default function AuditLogs({ token }: AuditLogsProps) {
             {data && data.totalPages > 1 && (
                 <div className="p-4 border-t border-slate-800 flex items-center justify-between bg-slate-900/50">
                     <span className="text-sm text-slate-400">
-                        Strana <span className="font-medium text-slate-300">{data.number + 1}</span> z <span className="font-medium text-slate-300">{data.totalPages}</span>
+                        Page <span className="font-medium text-slate-300">{data.number + 1}</span> of <span className="font-medium text-slate-300">{data.totalPages}</span>
                     </span>
                     <div className="flex gap-2">
                         <button

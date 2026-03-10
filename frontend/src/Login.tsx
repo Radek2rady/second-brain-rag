@@ -26,16 +26,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             const data = await res.json();
 
             if (res.ok) {
-                console.log("Úspěšné přihlášení!");
+                console.log("Login successful!");
                 console.log("JWT Token:", data.token);
-                console.log("Role:", data.roles);
+                console.log("Roles:", data.roles);
                 onLoginSuccess(data.token, data.roles);
             } else {
-                setError(data.message || 'Přihlášení se nezdařilo');
+                setError(data.message || 'Login failed');
             }
         } catch (err) {
             console.error(err);
-            setError('Chyba při komunikaci se serverem');
+            setError('Error communicating with server');
         } finally {
             setIsLoading(false);
         }
@@ -49,7 +49,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                         <Bot className="w-7 h-7 text-white" />
                     </div>
                 </div>
-                <h2 className="text-2xl font-semibold text-center mb-6 text-slate-200">Přihlášení</h2>
+                <h2 className="text-2xl font-semibold text-center mb-6 text-slate-200">Login</h2>
 
                 {error && (
                     <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-4 text-sm text-center">
@@ -58,19 +58,19 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 )}
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-slate-400 mb-2">Uživatelské jméno</label>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Username</label>
                     <input
                         type="text"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        placeholder="např. jan"
+                        placeholder="e.g. jan"
                         required
                     />
                 </div>
 
                 <div className="mb-6">
-                    <label className="block text-sm font-medium text-slate-400 mb-2">Heslo</label>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Password</label>
                     <input
                         type="password"
                         value={password}
@@ -86,7 +86,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                     disabled={isLoading || !username || !password}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors flex justify-center items-center disabled:opacity-50"
                 >
-                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Přihlásit se'}
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Log In'}
                 </button>
             </form>
         </div>
