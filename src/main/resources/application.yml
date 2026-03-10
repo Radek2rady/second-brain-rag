@@ -36,6 +36,8 @@ spring:
     vectorstore:
       pgvector:
         initialize-schema: false
+    cohere:
+      api-key: ${COHERE_API_KEY}
 
 server:
   tomcat:
