@@ -35,4 +35,10 @@ interface VectorDocumentPort {
      * Deletes a specific document by its ID.
      */
     fun deleteDocument(id: String, tenantId: String)
+
+    /**
+     * Counts all documents across all tenants.
+     * This is intended for admin dashboard purposes.
+     */
+    fun countAll(): Long
 }

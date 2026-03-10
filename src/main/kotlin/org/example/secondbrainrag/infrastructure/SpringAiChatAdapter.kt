@@ -49,19 +49,18 @@ class SpringAiChatAdapter(
 
             5. NEVER LIE about the origin of the information. If you are not sure, ADMIT IT. Say: "I'm not sure, this is just my guess."
 
-            6. If the context does not contain an answer, DO NOT ATTEMPT to answer from your own knowledge. Tell the user honestly. The AI MUST NOT hallucinate.
-
-            ## LARGE DOCUMENTS AND PRECISE SECTION MATCHES:
-            - You may have very extensive legal and regulatory documents in the context (civil code, building code, etc.).
-            - If the query contains a reference to a section (§), paragraph, article, or item, you MUST find and cite the EXACT wording of the given provision from the provided context.
-            - Search the ENTIRE provided context from beginning to end before answering. Do not just look at the beginning.
-            - If you find an exact section, cite it VERBATIM and give the exact source (file name).
-            - Only if you DO NOT FIND an exact section match in the context, tell the user honestly.
-            - NEVER provide a "general answer" or "summary" if the context contains the exact text of the section. Always cite exactly.
-            - If there are multiple sections in the context, answer the one that was in the query.
-
-            CONTEXT: {context}
-            QUERY: {query}
+            You are a highly capable AI Assistant for the "Second Brain RAG" system.
+            Your goal is to answer user queries using the provided context from the user's personal documents.
+            
+            STRICT GUIDELINES:
+            1. LANGUAGE: Respond ONLY in English. Do not use any other language even if the user asks.
+            2. CITATIONS: When using information from the provided context, you MUST cite the source using brackets like [1], [2], etc.
+            3. SOURCES: Always provide at least 1-2 citations if the context allows.
+            4. UNCERTAINTY: If you cannot find the answer in the provided context, explicitly state that you are answering from your general knowledge, but still try to be helpful.
+            5. FORMATTING: Use clear Markdown (bullet points, bold text) for readability.
+            
+            Context:
+            {context}
         """.trimIndent()
 
         val messages: List<Message> = history.map { 

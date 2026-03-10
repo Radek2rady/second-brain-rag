@@ -59,8 +59,8 @@ class DocumentService(
         // 5. Build context (include metadata markers for source citation)
         val localContext = if (hasLocalResults) {
             similarDocuments.joinToString(separator = "\n\n") {
-                val fileInfo = it.metadata["fileName"] ?: it.metadata["source"] ?: "Neznámý soubor"
-                "--- ZDROJ: $fileInfo ---\n${it.content}"
+                val fileInfo = it.metadata["fileName"] ?: it.metadata["source"] ?: "Unknown File"
+                "--- SOURCE: $fileInfo ---\n${it.content}"
             }
         } else ""
 
@@ -71,11 +71,13 @@ class DocumentService(
         val context = when (source) {
             AnswerSource.LOCAL -> localContext
             AnswerSource.WEB -> webContext
-            AnswerSource.HYBRID -> "=== LOKÁLNÍ DOKUMENTY ===\n$localContext\n\n=== WEBOVÉ ZDROJE ===\n$webContext"
+            AnswerSource.HYBRID -> "=== LOCAL DOCUMENTS ===\n$localContext\n\n=== WEB SOURCES ===\n$webContext"
         }
 
-        // 6. Build references from web results
-        val references = webResults.map { it.url }
+        // 6. Build references (combine web URLs and local file names)
+        val localReferences = similarDocuments.map { (it.metadata["fileName"] ?: it.metadata["source"] ?: "Unknown File").toString() }.distinct()
+        val webReferences = webResults.map { it.url }
+        val references = localReferences + webReferences
 
         // 7. Generate response with source hint for transparency
         val sourceHint = source.name

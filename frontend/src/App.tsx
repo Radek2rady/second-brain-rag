@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileText, Paperclip, Loader2, Globe, HardDrive, AlertTriangle, ExternalLink, Blend } from 'lucide-react';
+import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileText, Paperclip, Loader2, Globe, HardDrive, AlertTriangle, ExternalLink, Blend, ShieldAlert, LayoutDashboard, Users } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Login from './Login';
 import AuditLogs from './AuditLogs';
 import UserList from './UserList';
+import AdminOverview from './AdminOverview';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -24,7 +25,7 @@ function SourceBadge({ source }: { source: 'LOCAL' | 'WEB' | 'HYBRID' }) {
   const config = {
     LOCAL: {
       icon: <HardDrive className="w-3 h-3" />,
-      label: 'Zdroj: Tvůj Second Brain',
+      label: 'Source: Your Second Brain',
       bg: 'bg-emerald-500/15',
       border: 'border-emerald-500/30',
       text: 'text-emerald-400',
@@ -32,7 +33,7 @@ function SourceBadge({ source }: { source: 'LOCAL' | 'WEB' | 'HYBRID' }) {
     },
     WEB: {
       icon: <Globe className="w-3 h-3" />,
-      label: 'Zdroj: Internet',
+      label: 'Source: Internet',
       bg: 'bg-amber-500/15',
       border: 'border-amber-500/30',
       text: 'text-amber-400',
@@ -40,7 +41,7 @@ function SourceBadge({ source }: { source: 'LOCAL' | 'WEB' | 'HYBRID' }) {
     },
     HYBRID: {
       icon: <Blend className="w-3 h-3" />,
-      label: 'Zdroj: Second Brain + Internet',
+      label: 'Source: Second Brain + Internet',
       bg: 'bg-blue-500/15',
       border: 'border-blue-500/30',
       text: 'text-blue-400',
@@ -65,9 +66,9 @@ function HallucinationWarning() {
     <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs leading-relaxed animate-[fadeIn_0.4s_ease-out] flex items-start gap-2">
       <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" />
       <div>
-        <span className="font-semibold text-amber-400">Upozornění:</span> Tato odpověď pochází z internetu.
-        Informace nebyly ověřeny vůči tvé znalostní databázi.
-        Model může <span className="font-semibold">halucinovat</span> nebo postrádat logické uvažování — ověř si fakta z důvěryhodných zdrojů.
+        <span className="font-semibold text-amber-400">Warning:</span> This response comes from the internet.
+        The information has not been verified against your knowledge base.
+        The model may <span className="font-semibold">hallucinate</span> or lack logical reasoning — verify the facts from trusted sources.
       </div>
     </div>
   );
@@ -77,26 +78,41 @@ function HallucinationWarning() {
 function ReferencesList({ references }: { references: string[] }) {
   if (references.length === 0) return null;
 
+  const isUrl = (str: string) => str.startsWith('http://') || str.startsWith('https://');
+
   return (
     <div className="mt-3 pt-3 border-t border-slate-700/50 animate-[fadeIn_0.5s_ease-out]">
-      <div className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1.5">
+      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
         <ExternalLink className="w-3 h-3" />
-        Webové zdroje
+        Sources used
       </div>
-      <div className="flex flex-col gap-1.5">
-        {references.map((url, i) => (
-          <a
-            key={i}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-blue-400 hover:text-blue-300 hover:underline truncate transition-colors flex items-center gap-1.5 group"
-          >
-            <span className="w-4 h-4 rounded bg-slate-700 flex items-center justify-center flex-shrink-0 text-[10px] font-medium text-slate-400 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
-              {i + 1}
-            </span>
-            <span className="truncate">{url}</span>
-          </a>
+      <div className="flex flex-wrap gap-2">
+        {references.map((ref, i) => (
+          isUrl(ref) ? (
+            <a
+              key={i}
+              href={ref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400 hover:bg-blue-500/20 transition-colors max-w-[200px]"
+            >
+              <span className="w-3.5 h-3.5 rounded bg-blue-500/20 flex items-center justify-center text-[9px] font-bold">
+                {i + 1}
+              </span>
+              <span className="truncate">{ref}</span>
+            </a>
+          ) : (
+            <div
+              key={i}
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-700/50 border border-slate-700 text-[11px] text-slate-300 max-w-[200px]"
+            >
+              <span className="w-3.5 h-3.5 rounded bg-slate-600 flex items-center justify-center text-[9px] font-bold text-slate-300">
+                {i + 1}
+              </span>
+              <FileText className="w-3 h-3 text-slate-400" />
+              <span className="truncate">{ref}</span>
+            </div>
+          )
         ))}
       </div>
     </div>
@@ -108,7 +124,7 @@ export default function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('rag_token'));
   const [roles, setRoles] = useState<string[]>(JSON.parse(localStorage.getItem('rag_roles') || '[]'));
 
-  const [activeTab, setActiveTab] = useState<'chat' | 'knowledge' | 'audit' | 'users'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'knowledge' | 'audit' | 'users' | 'overview'>('chat');
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -213,7 +229,7 @@ export default function App() {
   }, [activeTab]);
 
   const handleDeleteDocument = async (id: string) => {
-    if (!confirm('Opravdu chceš smazat tento dokument?')) return;
+    if (!confirm('Are you sure you want to delete this document?')) return;
     try {
       const res = await fetch(`http://localhost:8080/api/documents/${id}`, {
         method: 'DELETE',
@@ -234,7 +250,7 @@ export default function App() {
   };
 
   const handleClearHistory = () => {
-    if (confirm('Opravdu smazat lokální historii?')) handleNewChat();
+    if (confirm('Are you sure you want to clear local history?')) handleNewChat();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -262,22 +278,20 @@ export default function App() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
-          // No Content-Type header is set, browser will automatically set multipart/form-data with bounds!
         },
         body: formData,
       });
-      const data = await res.json();
+      const data = res.ok ? await res.json() : { message: 'Upload failed' };
 
       if (res.ok) {
-        setUploadStatus(`✓ "${file.name}" nahrán úspěšně!`);
-        // Auto-refresh Knowledge Base if it is active
+        setUploadStatus(`✓ "${file.name}" uploaded successfully!`);
         if (activeTab === 'knowledge') loadDocuments();
       } else {
-        setUploadStatus(`✗ Chyba: ${data.message}`);
+        setUploadStatus(`✗ Error: ${data.message}`);
       }
     } catch (error) {
       console.error(error);
-      setUploadStatus('✗ Chyba při nahrávání souboru.');
+      setUploadStatus('✗ Error uploading file.');
     } finally {
       setIsUploading(false);
       setTimeout(() => setUploadStatus(null), 4000);
@@ -326,7 +340,7 @@ export default function App() {
       console.error(error);
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Omlouvám se, došlo k chybě při komunikaci se serverem.' }
+        { role: 'assistant', content: 'I am sorry, an error occurred while communicating with the server.' }
       ]);
     } finally {
       setIsLoading(false);
@@ -342,7 +356,7 @@ export default function App() {
 
   // RBAC Guard
   useEffect(() => {
-    if ((activeTab === 'audit' || activeTab === 'users') && !isAdmin) {
+    if ((activeTab === 'audit' || activeTab === 'users' || activeTab === 'overview') && !isAdmin) {
       setActiveTab('chat');
     }
   }, [activeTab, isAdmin]);
@@ -394,33 +408,42 @@ export default function App() {
           </button>
         </div>
 
-        <div className="p-3 space-y-2">
+        <div className="p-4 space-y-3">
           <button
             onClick={handleNewChat}
-            className="w-full flex items-center gap-2 px-3 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm font-medium text-sm"
+            className="w-full flex items-center justify-center gap-2 px-4 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/20 font-bold text-base active:scale-95 group"
           >
-            <Plus className="w-4 h-4" />
-            Nový chat
+            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+            New Chat
           </button>
 
-          <button
-            onClick={() => { setActiveTab('knowledge'); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center gap-2 px-3 py-3 rounded-lg transition-colors font-medium text-sm ${activeTab === 'knowledge' ? 'bg-slate-800 text-blue-400' : 'text-slate-300 hover:bg-slate-800'}`}
-          >
-            <Database className="w-4 h-4" />
-            Knowledge Base
-          </button>
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              onClick={() => { setActiveTab('knowledge'); setIsSidebarOpen(false); }}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm ${activeTab === 'knowledge' ? 'bg-slate-800 text-blue-400 border border-blue-500/20' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}
+            >
+              <Database className="w-4 h-4" />
+              Knowledge Base
+            </button>
+          </div>
         </div>
 
         {isAdmin && (
           <div className="px-3 py-2 space-y-1 mt-2 border-t border-slate-800">
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2 mt-2">Admin Tools</div>
             <button
+              onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm ${activeTab === 'overview' ? 'bg-slate-800 text-blue-400' : 'text-slate-300 hover:bg-slate-800'}`}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Overview
+            </button>
+            <button
               onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}
               className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm ${activeTab === 'users' ? 'bg-slate-800 text-purple-400' : 'text-slate-300 hover:bg-slate-800'}`}
             >
-              <User className="w-4 h-4" />
-              Role & Uživatelé
+              <Users className="w-4 h-4" />
+              Roles & Users
             </button>
             <button
               onClick={() => { setActiveTab('audit'); setIsSidebarOpen(false); }}
@@ -433,10 +456,10 @@ export default function App() {
         )}
 
         <div className="flex-1 overflow-y-auto p-3">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">Historie konverzací</div>
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">Conversation History</div>
           <div className="space-y-1">
             {conversations.length === 0 && (
-              <div className="px-2 text-sm text-slate-500 italic">Zatím žádná historie.</div>
+              <div className="px-2 text-sm text-slate-500 italic">No history yet.</div>
             )}
             {conversations.map((id) => (
               <button
@@ -445,7 +468,7 @@ export default function App() {
                 className={`w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg transition-colors text-left truncate ${conversationId === id && activeTab === 'chat' ? 'bg-slate-800 text-slate-200' : 'text-slate-400 hover:bg-slate-800/50'}`}
               >
                 <MessageSquare className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Konverzace {id.substring(0, 8)}</span>
+                <span className="truncate">Conversation {id.substring(0, 8)}</span>
               </button>
             ))}
           </div>
@@ -464,7 +487,7 @@ export default function App() {
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors font-medium border border-slate-700/50"
           >
             <X className="w-4 h-4" />
-            Odhlásit
+            Logout
           </button>
         </div>
       </div>
@@ -485,9 +508,10 @@ export default function App() {
             </div>
             <h1 className="text-lg font-semibold text-slate-200 tracking-tight flex items-center gap-2">
               {activeTab === 'chat' && 'Second Brain RAG'}
-              {activeTab === 'knowledge' && 'Znalostní Databáze'}
-              {activeTab === 'users' && 'Role & Uživatelé'}
+              {activeTab === 'knowledge' && 'Knowledge Database'}
+              {activeTab === 'users' && 'Roles & Users'}
               {activeTab === 'audit' && 'Audit Dashboard'}
+              {activeTab === 'overview' && 'System Overview'}
 
               {roles.length > 0 && (
                 <span className="text-[10px] font-medium uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
@@ -515,8 +539,8 @@ export default function App() {
                   <div className="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mb-6 shadow-sm border border-slate-700">
                     <Bot className="w-8 h-8 text-blue-500" />
                   </div>
-                  <h2 className="text-2xl font-semibold text-slate-200 mb-2">Jak ti mohu pomoci?</h2>
-                  <p className="text-slate-400 max-w-md">Jsem tvůj osobní asistent napojený na tvou znalostní databázi. Zeptej se mě na cokoliv z tvých dokumentů.</p>
+                  <h2 className="text-2xl font-semibold text-slate-200 mb-2">How can I help you?</h2>
+                  <p className="text-slate-400 max-w-md">I am your personal assistant connected to your knowledge database. Ask me anything from your documents.</p>
                 </div>
               ) : (
                 <div className="max-w-3xl mx-auto w-full py-6 sm:py-10 px-4 sm:px-6 flex flex-col gap-6">
@@ -633,7 +657,7 @@ export default function App() {
                   </div>
                 </form>
                 <div className="text-center mt-2 text-xs text-slate-500 flex items-center justify-center gap-1">
-                  Second Brain RAG může dělat chyby. Ověřujte důležité informace.
+                  Second Brain RAG can make mistakes. Verify important information.
                 </div>
               </div>
             </footer>
@@ -644,7 +668,7 @@ export default function App() {
             <div className="max-w-4xl mx-auto space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2">
-                  <Database className="w-5 h-5 text-blue-500" /> Dokumenty v databázi
+                  <Database className="w-5 h-5 text-blue-500" /> Documents in Database
                 </h2>
                 <div className="flex items-center gap-3">
                   <button
@@ -653,7 +677,7 @@ export default function App() {
                     className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
                   >
                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                    Nahrát soubor
+                    Upload File
                   </button>
                   <div className="text-sm text-slate-400">{documents.length} chunks</div>
                 </div>
@@ -661,11 +685,11 @@ export default function App() {
 
               {isDocumentsLoading ? (
                 <div className="flex items-center justify-center py-12 text-slate-400">
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" /> Načítám...
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading...
                 </div>
               ) : documents.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 border border-slate-800 border-dashed rounded-xl bg-slate-900/50">
-                  Databáze je momentálně prázdná. Nahraj soubor pomocí tlačítka výše.
+                  The database is currently empty. Upload a file using the button above.
                 </div>
               ) : (
                 <div className="grid gap-4">
@@ -696,7 +720,7 @@ export default function App() {
                         <button
                           onClick={() => handleDeleteDocument(doc.id)}
                           className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded-md transition-colors"
-                          title="Smazat dokument"
+                          title="Delete Document"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -717,6 +741,12 @@ export default function App() {
           <main className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-950">
             <div className="max-w-6xl mx-auto">
               <AuditLogs token={token} />
+            </div>
+          </main>
+        ) : activeTab === 'overview' && isAdmin ? (
+          <main className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-950">
+            <div className="max-w-6xl mx-auto">
+              <AdminOverview token={token} />
             </div>
           </main>
         ) : null}

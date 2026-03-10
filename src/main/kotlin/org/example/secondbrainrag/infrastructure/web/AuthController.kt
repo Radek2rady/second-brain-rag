@@ -32,6 +32,7 @@ class AuthController(
         SecurityContextHolder.getContext().authentication = auth
 
         val roles = auth.authorities.map { it.authority }
+        println("DEBUG: AuthController roles extracted: $roles")
         val token = tokenProvider.createToken(request.username, roles)
 
         auditService.logAction(

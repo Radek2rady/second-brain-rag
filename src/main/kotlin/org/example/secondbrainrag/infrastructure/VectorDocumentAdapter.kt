@@ -98,4 +98,8 @@ class VectorDocumentAdapter(
             logger.warn("Attempt to delete document {} by unauthorized tenant {}", id, tenantId)
         }
     }
+
+    override fun countAll(): Long {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM vector_store", Long::class.java) ?: 0L
+    }
 }

@@ -18,8 +18,14 @@ class AuditController(private val auditEventRepository: AuditEventRepository) {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     fun getAuditLogs(
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue = "") username: String,
+        @org.springframework.web.bind.annotation.RequestParam(defaultValue = "") action: String,
         @PageableDefault(size = 50, sort = ["timestamp"], direction = Sort.Direction.DESC) pageable: Pageable
     ): Page<AuditEventJpaEntity> {
-        return auditEventRepository.findAll(pageable)
+        return auditEventRepository.findByUsernameContainingIgnoreCaseAndActionContainingIgnoreCase(
+            username, 
+            action, 
+            pageable
+        )
     }
 }
