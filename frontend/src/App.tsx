@@ -78,26 +78,41 @@ function HallucinationWarning() {
 function ReferencesList({ references }: { references: string[] }) {
   if (references.length === 0) return null;
 
+  const isUrl = (str: string) => str.startsWith('http://') || str.startsWith('https://');
+
   return (
     <div className="mt-3 pt-3 border-t border-slate-700/50 animate-[fadeIn_0.5s_ease-out]">
-      <div className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-1.5">
+      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
         <ExternalLink className="w-3 h-3" />
-        Web Sources
+        Sources used
       </div>
-      <div className="flex flex-col gap-1.5">
-        {references.map((url, i) => (
-          <a
-            key={i}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-blue-400 hover:text-blue-300 hover:underline truncate transition-colors flex items-center gap-1.5 group"
-          >
-            <span className="w-4 h-4 rounded bg-slate-700 flex items-center justify-center flex-shrink-0 text-[10px] font-medium text-slate-400 group-hover:bg-blue-500/20 group-hover:text-blue-400 transition-colors">
-              {i + 1}
-            </span>
-            <span className="truncate">{url}</span>
-          </a>
+      <div className="flex flex-wrap gap-2">
+        {references.map((ref, i) => (
+          isUrl(ref) ? (
+            <a
+              key={i}
+              href={ref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-400 hover:bg-blue-500/20 transition-colors max-w-[200px]"
+            >
+              <span className="w-3.5 h-3.5 rounded bg-blue-500/20 flex items-center justify-center text-[9px] font-bold">
+                {i + 1}
+              </span>
+              <span className="truncate">{ref}</span>
+            </a>
+          ) : (
+            <div
+              key={i}
+              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-700/50 border border-slate-700 text-[11px] text-slate-300 max-w-[200px]"
+            >
+              <span className="w-3.5 h-3.5 rounded bg-slate-600 flex items-center justify-center text-[9px] font-bold text-slate-300">
+                {i + 1}
+              </span>
+              <FileText className="w-3 h-3 text-slate-400" />
+              <span className="truncate">{ref}</span>
+            </div>
+          )
         ))}
       </div>
     </div>
@@ -393,22 +408,24 @@ export default function App() {
           </button>
         </div>
 
-        <div className="p-3 space-y-2">
+        <div className="p-4 space-y-3">
           <button
             onClick={handleNewChat}
-            className="w-full flex items-center gap-2 px-3 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm font-medium text-sm"
+            className="w-full flex items-center justify-center gap-2 px-4 py-4 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/20 font-bold text-base active:scale-95 group"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
             New Chat
           </button>
 
-          <button
-            onClick={() => { setActiveTab('knowledge'); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center gap-2 px-3 py-3 rounded-lg transition-colors font-medium text-sm ${activeTab === 'knowledge' ? 'bg-slate-800 text-blue-400' : 'text-slate-300 hover:bg-slate-800'}`}
-          >
-            <Database className="w-4 h-4" />
-            Knowledge Base
-          </button>
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              onClick={() => { setActiveTab('knowledge'); setIsSidebarOpen(false); }}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm ${activeTab === 'knowledge' ? 'bg-slate-800 text-blue-400 border border-blue-500/20' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}
+            >
+              <Database className="w-4 h-4" />
+              Knowledge Base
+            </button>
+          </div>
         </div>
 
         {isAdmin && (
