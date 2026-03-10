@@ -14,12 +14,13 @@ class TokenProvider {
     private val key: SecretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256)
     private val validityInMilliseconds: Long = 3600000 * 24 // 24 hours
 
-    fun createToken(username: String): String {
+    fun createToken(username: String, roles: List<String> = emptyList()): String {
         val now = Date()
         val validity = Date(now.time + validityInMilliseconds)
 
         return Jwts.builder()
             .setSubject(username)
+            .claim("roles", roles)
             .setIssuedAt(now)
             .setExpiration(validity)
             .signWith(key)
@@ -33,6 +34,17 @@ class TokenProvider {
             .parseClaimsJws(token)
             .body
             .subject
+    }
+
+    fun getRoles(token: String): List<String> {
+        val claims = Jwts.parserBuilder()
+            .setSigningKey(key)
+            .build()
+            .parseClaimsJws(token)
+            .body
+        
+        @Suppress("UNCHECKED_CAST")
+        return claims.get("roles", List::class.java) as? List<String> ?: emptyList()
     }
 
     fun validateToken(token: String): Boolean {

@@ -11,9 +11,15 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
+
 @Configuration
 @EnableWebSecurity
-class SecurityConfig(private val tokenProvider: TokenProvider) {
+@EnableMethodSecurity
+class SecurityConfig(
+    private val tokenProvider: TokenProvider,
+    private val customAccessDeniedHandler: CustomAccessDeniedHandler
+) {
 
     @Bean
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
@@ -29,6 +35,9 @@ class SecurityConfig(private val tokenProvider: TokenProvider) {
                     .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
                     .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
+            }
+            .exceptionHandling { exceptions ->
+                exceptions.accessDeniedHandler(customAccessDeniedHandler)
             }
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter::class.java)
 

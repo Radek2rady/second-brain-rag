@@ -47,3 +47,23 @@ To guarantee robustness, our Full-Text search employs dynamic fallbacks:
 2. **ILIKE Fallback:** If TSQuery yields 0 results (e.g., due to unusual query structure), the system autonomously falls back to a multi-token `ILIKE` substring search to rescue potential matches.
 
 By continuously refining these SQL queries, adjusting AI similarity thresholds, and strictly enforcing tenant metadata, we ensure the search engine is enterprise-ready, fast, and secure.
+
+---
+
+## 3. Security Measures
+
+Our platform implements a comprehensive security posture to govern access to the system:
+
+### A. Multi-tenancy Isolation
+As described in the iterative search optimization section, every interaction is scoped to a specific tenant. Data leakage between users is strictly prevented by injecting the `tenantId` (derived from the validated JWT) into all database interactions, both at the pgvector similarity search layer and the relational metadata JSONB queries.
+
+### B. RBAC (Role-Based Access Control) Model
+We implement standard RBAC using Spring Security's method-level security (`@PreAuthorize`).
+- **Roles:** The JWT claims include a list of authorizations (e.g., `ROLE_ADMIN`, `ROLE_LEGAL_USER`).
+- **Enforcement:** Sensitive operations (like viewing audit logs) are strictly reserved for administrative roles, ensuring clear boundaries of operational authority.
+
+### C. Auditability
+To maintain accountability and compliance, we trace critical user actions:
+- An asynchronous `AuditService` logs important events (e.g., document ingestion, search queries, deletions) to a dedicated `audit_events` PostgreSQL table.
+- Failed authorization attempts (Access Denied) are captured to identify potential malicious activity.
+- The audit log retains the timestamp, acting user (tenantId/username), the concrete action performed, and its status.
