@@ -16,9 +16,9 @@ Vytvořit inteligentního asistenta, který umí odpovídat na dotazy na základ
 ## 🔒 Phase 2: Security
 - [x] JWT Authentication
 - [x] Multi-tenant data isolation
-- [ ] DB Users & BCrypt - **IN PROGRESS**
-- [ ] RBAC (Role-Based Access Control) - **IN PROGRESS**
-- [ ] Audit Logging
+- [x] DB Users & BCrypt
+- [x] RBAC (Role-Based Access Control)
+- [x] Audit Logging
 
 ## ⚙️ Phase 3: Automation & Enhancements - ROADMAP
 - [ ] Google Drive Integration
