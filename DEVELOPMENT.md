@@ -67,3 +67,9 @@ To maintain accountability and compliance, we trace critical user actions:
 - An asynchronous `AuditService` logs important events (e.g., document ingestion, search queries, deletions) to a dedicated `audit_events` PostgreSQL table.
 - Failed authorization attempts (Access Denied) are captured to identify potential malicious activity.
 - The audit log retains the timestamp, acting user (tenantId/username), the concrete action performed, and its status.
+
+### D. Frontend/UI Authorization
+At the user interface level, RBAC is enforced by evaluating the JWT roles stored in the client `localStorage` (`rag_roles`). 
+- **Navigation Guard:** Admin-specific tools (e.g., User Management, Audit Dashboard) are conditionally rendered in the Sidebar only if the `ROLE_ADMIN` is present.
+- **Route Protection:** A `useEffect` hook acts as an RBAC Guard, actively monitoring the React state. If a non-admin user somehow navigates to a protected state, they are immediately redirected back to the default `chat` view.
+- **Secure API Protection:** Frontend restrictions are only visual. The true security boundary is the backend, which throws `403 Forbidden` on unauthorized API calls.

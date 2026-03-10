@@ -8,7 +8,7 @@ spring:
 
   sql:
     init:
-      mode: always
+      mode: never
 
   mvc:
     async:
@@ -20,10 +20,10 @@ spring:
     password: ${DB_BRAIN_RAG_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
-    defer-datasource-initialization: true
+    defer-datasource-initialization: false
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -35,7 +35,7 @@ spring:
       api-key: ${OPENAI_API_KEY}
     vectorstore:
       pgvector:
-        initialize-schema: true
+        initialize-schema: false
 
 server:
   tomcat:

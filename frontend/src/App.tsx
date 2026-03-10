@@ -3,6 +3,8 @@ import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileTe
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Login from './Login';
+import AuditLogs from './AuditLogs';
+import UserList from './UserList';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -106,7 +108,7 @@ export default function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('rag_token'));
   const [roles, setRoles] = useState<string[]>(JSON.parse(localStorage.getItem('rag_roles') || '[]'));
 
-  const [activeTab, setActiveTab] = useState<'chat' | 'knowledge'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'knowledge' | 'audit' | 'users'>('chat');
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -126,6 +128,7 @@ export default function App() {
 
   // UI state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isAdmin = roles.includes('ROLE_ADMIN');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -337,6 +340,13 @@ export default function App() {
     setRoles([]);
   };
 
+  // RBAC Guard
+  useEffect(() => {
+    if ((activeTab === 'audit' || activeTab === 'users') && !isAdmin) {
+      setActiveTab('chat');
+    }
+  }, [activeTab, isAdmin]);
+
   if (!token) {
     return (
       <Login
@@ -402,6 +412,26 @@ export default function App() {
           </button>
         </div>
 
+        {isAdmin && (
+          <div className="px-3 py-2 space-y-1 mt-2 border-t border-slate-800">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2 mt-2">Admin Tools</div>
+            <button
+              onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm ${activeTab === 'users' ? 'bg-slate-800 text-purple-400' : 'text-slate-300 hover:bg-slate-800'}`}
+            >
+              <User className="w-4 h-4" />
+              Role & Uživatelé
+            </button>
+            <button
+              onClick={() => { setActiveTab('audit'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm ${activeTab === 'audit' ? 'bg-slate-800 text-amber-400' : 'text-slate-300 hover:bg-slate-800'}`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Audit Dashboard
+            </button>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-3">
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">Historie konverzací</div>
           <div className="space-y-1">
@@ -454,7 +484,11 @@ export default function App() {
               <Bot className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-lg font-semibold text-slate-200 tracking-tight flex items-center gap-2">
-              {activeTab === 'chat' ? 'Second Brain RAG' : 'Znalostní Databáze'}
+              {activeTab === 'chat' && 'Second Brain RAG'}
+              {activeTab === 'knowledge' && 'Znalostní Databáze'}
+              {activeTab === 'users' && 'Role & Uživatelé'}
+              {activeTab === 'audit' && 'Audit Dashboard'}
+
               {roles.length > 0 && (
                 <span className="text-[10px] font-medium uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
                   {roles.join(', ')}
@@ -604,7 +638,7 @@ export default function App() {
               </div>
             </footer>
           </>
-        ) : (
+        ) : activeTab === 'knowledge' ? (
           /* Knowledge Base Tab */
           <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
             <div className="max-w-4xl mx-auto space-y-6">
@@ -673,7 +707,19 @@ export default function App() {
               )}
             </div>
           </main>
-        )}
+        ) : activeTab === 'users' && isAdmin ? (
+          <main className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-950">
+            <div className="max-w-4xl mx-auto">
+              <UserList token={token} currentUsername={messages[0] ? token : 'TY'} />
+            </div>
+          </main>
+        ) : activeTab === 'audit' && isAdmin ? (
+          <main className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-950">
+            <div className="max-w-6xl mx-auto">
+              <AuditLogs token={token} />
+            </div>
+          </main>
+        ) : null}
       </div>
     </div>
   );

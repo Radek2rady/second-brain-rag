@@ -26,7 +26,7 @@ Vytvořit inteligentního asistenta, který umí odpovídat na dotazy na základ
 
 ## 💻 Phase 4: UI (Frontend) - ROADMAP
 - [x] CORS for frontend
-- [ ] React/Vite Chat Frontend - **IN PROGRESS**
+- [ ] React/Vite Chat Frontend
 
 ## 🛠️ Tech Stack
 - **Backend:** Kotlin, Spring AI, Spring Security, Spring Data JPA
