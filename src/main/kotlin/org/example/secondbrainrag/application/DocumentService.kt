@@ -75,7 +75,7 @@ class DocumentService(
         }
 
         // 6. Build references (combine web URLs and local file names)
-        val localReferences = similarDocuments.map { it.metadata["fileName"] ?: it.metadata["source"] ?: "Unknown File" }.distinct()
+        val localReferences = similarDocuments.map { (it.metadata["fileName"] ?: it.metadata["source"] ?: "Unknown File").toString() }.distinct()
         val webReferences = webResults.map { it.url }
         val references = localReferences + webReferences
 
