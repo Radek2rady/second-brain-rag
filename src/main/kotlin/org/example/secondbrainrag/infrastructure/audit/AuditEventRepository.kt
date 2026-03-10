@@ -11,6 +11,12 @@ interface AuditEventRepository : JpaRepository<AuditEventJpaEntity, String> {
     @Query("SELECT COUNT(e) FROM AuditEventJpaEntity e WHERE e.timestamp > :since")
     fun countSince(since: Instant): Long
 
+    fun findByUsernameContainingIgnoreCaseAndActionContainingIgnoreCase(
+        username: String,
+        action: String,
+        pageable: org.springframework.data.domain.Pageable
+    ): org.springframework.data.domain.Page<AuditEventJpaEntity>
+
     @Query("""
         SELECT e.username as username, COUNT(e) as count 
         FROM AuditEventJpaEntity e 

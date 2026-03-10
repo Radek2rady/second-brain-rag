@@ -28,11 +28,19 @@ export default function AuditLogs({ token }: AuditLogsProps) {
     const [data, setData] = useState<PageData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [page, setPage] = useState(0);
+    const [usernameFilter, setUsernameFilter] = useState('');
+    const [actionFilter, setActionFilter] = useState('');
 
     const fetchLogs = async (pageNumber: number) => {
         setIsLoading(true);
         try {
-            const res = await fetch(`http://localhost:8080/api/audit?page=${pageNumber}&size=10`, {
+            const params = new URLSearchParams({
+                page: pageNumber.toString(),
+                size: '10',
+                username: usernameFilter,
+                action: actionFilter
+            });
+            const res = await fetch(`http://localhost:8080/api/audit?${params.toString()}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -50,14 +58,36 @@ export default function AuditLogs({ token }: AuditLogsProps) {
     };
 
     useEffect(() => {
+        // Reset to page 0 when filters change, but we don't fetch on every keystroke
+        // unless requested. Just relying on the generic useEffect.
+        setPage(0);
+    }, [usernameFilter, actionFilter]);
+
+    useEffect(() => {
         fetchLogs(page);
-    }, [page, token]);
+    }, [page, token, usernameFilter, actionFilter]);
 
     return (
         <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden mt-6 shadow-sm">
-            <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+            <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50">
                 <h2 className="font-semibold text-slate-200">Audit Dashboard</h2>
-                <div className="text-sm text-slate-400">
+                <div className="flex flex-1 max-w-md gap-3 w-full">
+                    <input
+                        type="text"
+                        placeholder="Filter by User..."
+                        value={usernameFilter}
+                        onChange={(e) => setUsernameFilter(e.target.value)}
+                        className="flex-1 px-3 py-1.5 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-slate-500 transition-shadow transition-colors"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Filter by Action..."
+                        value={actionFilter}
+                        onChange={(e) => setActionFilter(e.target.value)}
+                        className="flex-1 px-3 py-1.5 text-sm bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-slate-500 transition-shadow transition-colors"
+                    />
+                </div>
+                <div className="text-sm text-slate-400 whitespace-nowrap">
                     Total records: {data?.totalElements || 0}
                 </div>
             </div>

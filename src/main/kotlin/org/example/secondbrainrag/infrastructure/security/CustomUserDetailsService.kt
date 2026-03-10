@@ -14,7 +14,14 @@ class CustomUserDetailsService(private val userRepository: UserRepository) : Use
         val userEntity = userRepository.findByUsername(username)
             ?: throw UsernameNotFoundException("User not found: $username")
 
-        val authorities = listOf(SimpleGrantedAuthority("ROLE_${userEntity.role.uppercase()}"))
+        var cleanRole = userEntity.role.uppercase()
+        println("DEBUG: userEntity.role = ${userEntity.role}")
+        while (cleanRole.startsWith("ROLE_")) {
+            cleanRole = cleanRole.removePrefix("ROLE_")
+        }
+        val finalRole = "ROLE_$cleanRole"
+        println("DEBUG: final role assigned = $finalRole")
+        val authorities = listOf(SimpleGrantedAuthority(finalRole))
 
         return User(
             userEntity.username,
