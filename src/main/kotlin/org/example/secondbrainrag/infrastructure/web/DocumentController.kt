@@ -10,6 +10,7 @@ import org.example.secondbrainrag.domain.VectorDocumentPort
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
+import java.security.Principal
 
 @RestController
 @RequestMapping("/api/documents")
@@ -26,24 +27,28 @@ class DocumentController(
     data class IngestRequest(val text: String, val metadata: Map<String, String>? = null)
 
     @PostMapping
-    fun saveDocument(@RequestBody request: SaveRequest): Map<String, String> {
+    fun saveDocument(@RequestBody request: SaveRequest, principal: Principal): Map<String, String> {
         val doc = VectorDocument(
             content = request.content,
             metadata = request.metadata ?: emptyMap()
         )
-        vectorDocumentPort.save(listOf(doc))
+        vectorDocumentPort.save(listOf(doc), principal.name)
         return mapOf("status" to "success", "id" to doc.id)
     }
 
     @PostMapping("/ingest")
-    fun ingestDocument(@RequestBody request: IngestRequest): Map<String, String> {
-        ingestionService.ingest(request.text, request.metadata ?: emptyMap())
+    fun ingestDocument(@RequestBody request: IngestRequest, principal: Principal): Map<String, String> {
+        ingestionService.ingest(request.text, request.metadata ?: emptyMap(), principal.name)
         return mapOf("status" to "success", "message" to "Text was chunked and ingested successfully")
     }
 
     @GetMapping("/search")
-    fun search(@RequestParam query: String, @RequestParam(defaultValue = "15") topK: Int): List<VectorDocument> {
-        return documentService.searchSimilar(query, topK)
+    fun search(
+        @RequestParam query: String, 
+        @RequestParam(defaultValue = "15") topK: Int, 
+        principal: Principal
+    ): List<VectorDocument> {
+        return documentService.searchSimilar(query, topK, principal.name)
     }
 
     data class ChatResponse(
@@ -56,9 +61,10 @@ class DocumentController(
     @GetMapping("/chat")
     fun chat(
         @RequestParam query: String,
-        @RequestParam(required = false) conversationId: String?
+        @RequestParam(required = false) conversationId: String?,
+        principal: Principal
     ): ChatResponse {
-        val result = documentService.chat(query, conversationId)
+        val result = documentService.chat(query, conversationId, principal.name)
         return ChatResponse(
             answer = result.answer,
             conversationId = result.conversationId,
@@ -80,20 +86,20 @@ class DocumentController(
     }
 
     @GetMapping
-    fun getAllDocuments(): List<VectorDocument> {
-        return vectorDocumentPort.getAllDocuments()
+    fun getAllDocuments(principal: Principal): List<VectorDocument> {
+        return vectorDocumentPort.getAllDocuments(principal.name)
     }
 
     @DeleteMapping("/{id}")
-    fun deleteDocument(@PathVariable id: String): Map<String, String> {
-        vectorDocumentPort.deleteDocument(id)
+    fun deleteDocument(@PathVariable id: String, principal: Principal): Map<String, String> {
+        vectorDocumentPort.deleteDocument(id, principal.name)
         return mapOf("status" to "success", "message" to "Document $id deleted")
     }
 
     @PostMapping("/upload")
-    fun uploadFile(@RequestParam("file") file: MultipartFile): ResponseEntity<Map<String, String>> {
+    fun uploadFile(@RequestParam("file") file: MultipartFile, principal: Principal): ResponseEntity<Map<String, String>> {
         return try {
-            val jobId = fileIngestionService.ingestFile(file)
+            val jobId = fileIngestionService.ingestFile(file, principal.name)
             ResponseEntity.accepted().body(mapOf(
                 "status" to "processing",
                 "jobId" to jobId,

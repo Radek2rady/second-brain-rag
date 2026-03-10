@@ -23,13 +23,13 @@ class DocumentServiceTest : BehaviorSpec({
             val expectedResponse = "Hlavním městem Francie je Paříž."
 
             every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
-            every { hybridSearchService.search(query) } returns listOf(
+            every { hybridSearchService.search(query, tenantId = "test-tenant") } returns listOf(
                 VectorDocument(content = "Paříž je hlavní město Francie."),
                 VectorDocument(content = "Francie leží v Evropě.")
             )
             every { chatPort.generateResponse(query, any(), emptyList(), "LOCAL") } returns expectedResponse
 
-            val result = documentService.chat(query, null)
+            val result = documentService.chat(query, null, "test-tenant")
 
             Then("it should return source LOCAL") {
                 result.source shouldBe AnswerSource.LOCAL
@@ -54,7 +54,7 @@ class DocumentServiceTest : BehaviorSpec({
             val expectedResponse = "Na základě informací z internetu..."
 
             every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
-            every { hybridSearchService.search(query) } returns emptyList()
+            every { hybridSearchService.search(query, tenantId = "test-tenant") } returns emptyList()
             every { webSearchPort.search(query, 3) } returns listOf(
                 WebSearchResult(
                     title = "Wikipedia: kvantová gravitace",
@@ -65,7 +65,7 @@ class DocumentServiceTest : BehaviorSpec({
             )
             every { chatPort.generateResponse(query, any(), emptyList(), "WEB") } returns expectedResponse
 
-            val result = documentService.chat(query, null)
+            val result = documentService.chat(query, null, "test-tenant")
 
             Then("it should return source WEB") {
                 result.source shouldBe AnswerSource.WEB

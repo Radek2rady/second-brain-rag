@@ -16,22 +16,22 @@ class DocumentService(
 
     private val logger = LoggerFactory.getLogger(DocumentService::class.java)
 
-    fun saveDocuments(documents: List<VectorDocument>) {
-        vectorDocumentPort.save(documents)
+    fun saveDocuments(documents: List<VectorDocument>, tenantId: String) {
+        vectorDocumentPort.save(documents, tenantId)
     }
 
-    fun searchSimilar(query: String, topK: Int = 4): List<VectorDocument> {
-        return vectorDocumentPort.searchSimilar(query, topK)
+    fun searchSimilar(query: String, topK: Int = 4, tenantId: String): List<VectorDocument> {
+        return vectorDocumentPort.searchSimilar(query, topK, tenantId)
     }
 
-    fun chat(query: String, conversationId: String?): ChatResponseDomain {
+    fun chat(query: String, conversationId: String?, tenantId: String): ChatResponseDomain {
         val activeConversationId = conversationId ?: UUID.randomUUID().toString()
 
         // 1. Retrieve history
         val history = chatHistoryPort.getLastMessages(activeConversationId, limit = 10)
 
         // 2. Retrieve relevant local documents via hybrid search (vector + full-text)
-        val similarDocuments = hybridSearchService.search(query)
+        val similarDocuments = hybridSearchService.search(query, tenantId = tenantId)
         val hasLocalResults = similarDocuments.isNotEmpty()
         logger.info("chat query='{}': {} local documents found (hasLocalResults={})", query, similarDocuments.size, hasLocalResults)
 

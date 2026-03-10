@@ -20,24 +20,27 @@ class VectorDocumentAdapter(
     private val logger = LoggerFactory.getLogger(VectorDocumentAdapter::class.java)
     private val objectMapper = jacksonObjectMapper()
 
-    override fun save(documents: List<VectorDocument>) {
-        saveAll(documents) // Delegating to saveAll for logic reuse
+    override fun save(documents: List<VectorDocument>, tenantId: String) {
+        saveAll(documents, tenantId) // Delegating to saveAll for logic reuse
     }
 
-    override fun saveAll(documents: List<VectorDocument>) {
+    override fun saveAll(documents: List<VectorDocument>, tenantId: String) {
         val springAiDocuments = documents.map { doc ->
             // Ensuring the ID is formatted as a valid UUID string
             val formattedId = java.util.UUID.fromString(doc.id).toString()
-            Document(formattedId, doc.content, doc.metadata)
+            val metadataWithTenant = doc.metadata.toMutableMap()
+            metadataWithTenant["tenantId"] = tenantId
+            Document(formattedId, doc.content, metadataWithTenant)
         }
         vectorStore.add(springAiDocuments)
     }
 
-    override fun searchSimilar(query: String, topK: Int): List<VectorDocument> {
+    override fun searchSimilar(query: String, topK: Int, tenantId: String): List<VectorDocument> {
         val searchRequest = SearchRequest.builder()
             .query(query)
             .topK(topK)
             .similarityThreshold(0.60)
+            .filterExpression("tenantId == '${tenantId}'")
             .build()
         val results = vectorStore.similaritySearch(searchRequest)
 
@@ -56,9 +59,9 @@ class VectorDocumentAdapter(
         } ?: emptyList()
     }
 
-    override fun getAllDocuments(): List<VectorDocument> {
-        val sql = "SELECT id, content, metadata FROM vector_store"
-        return jdbcTemplate.query(sql) { rs, _ ->
+    override fun getAllDocuments(tenantId: String): List<VectorDocument> {
+        val sql = "SELECT id, content, metadata FROM vector_store WHERE metadata->>'tenantId' = ?"
+        return jdbcTemplate.query(sql, { rs, _ ->
             // In pgvector, the id is usually a UUID string, content is text, metadata is JSONB
             // We'll deserialize metadata manually if needed, but for the UI we might only need id and content or minimal metadata.
             val id = rs.getString("id") ?: ""
@@ -78,10 +81,21 @@ class VectorDocumentAdapter(
                 content = content,
                 metadata = parsedMetadata
             )
-        }
+        }, tenantId)
     }
 
-    override fun deleteDocument(id: String) {
-        vectorStore.delete(listOf(id))
+    override fun deleteDocument(id: String, tenantId: String) {
+        val count = jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM vector_store WHERE id = ?::uuid AND metadata->>'tenantId' = ?", 
+            Int::class.java, 
+            id, 
+            tenantId
+        )
+        if (count != null && count > 0) {
+            vectorStore.delete(listOf(id))
+            logger.info("Deleted document {} for tenant {}", id, tenantId)
+        } else {
+            logger.warn("Attempt to delete document {} by unauthorized tenant {}", id, tenantId)
+        }
     }
 }

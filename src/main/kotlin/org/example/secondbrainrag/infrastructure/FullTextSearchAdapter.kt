@@ -81,7 +81,7 @@ class FullTextSearchAdapter(
         logger.info("Full-text search schema initialized successfully.")
     }
 
-    override fun searchByKeyword(query: String, topK: Int): List<VectorDocument> {
+    override fun searchByKeyword(query: String, topK: Int, tenantId: String): List<VectorDocument> {
         // Extract paragraph reference if present to prevent searching for the whole sentence
         val paragraphMatch = PARAGRAPH_REGEX.find(query)
         val actualQuery = if (paragraphMatch != null) {
@@ -97,13 +97,14 @@ class FullTextSearchAdapter(
 
         if (tsQuery.isBlank()) {
             logger.info("Empty tsQuery, falling back to ILIKE search for actualQuery='{}'", actualQuery)
-            return searchByIlike(actualQuery, topK)
+            return searchByIlike(actualQuery, topK, tenantId)
         }
 
         val sql = """
             SELECT id, content, metadata
             FROM vector_store
             WHERE content_tsv @@ to_tsquery('simple', ?)
+            AND metadata->>'tenantId' = ?
             ORDER BY ts_rank(content_tsv, to_tsquery('simple', ?)) DESC
             LIMIT ?
         """.trimIndent()
@@ -122,14 +123,14 @@ class FullTextSearchAdapter(
                 content = rs.getString("content") ?: "",
                 metadata = parsedMetadata
             )
-        }, tsQuery, tsQuery, topK)
+        }, tsQuery, tenantId, tsQuery, topK)
 
         logger.info("Full-text search returned {} results for actualQuery='{}'", results.size, actualQuery)
 
         // If tsvector returned nothing, always try ILIKE fallback
         if (results.isEmpty()) {
             logger.info("tsvector returned 0 results, falling back to ILIKE for actualQuery='{}'", actualQuery)
-            return searchByIlike(actualQuery, topK)
+            return searchByIlike(actualQuery, topK, tenantId)
         }
 
         return results
@@ -139,7 +140,7 @@ class FullTextSearchAdapter(
      * Fallback search using ILIKE for substring matching.
      * Generates an OR-based SQL query utilizing up to the first 3 keywords to maximize recall.
      */
-    private fun searchByIlike(query: String, topK: Int): List<VectorDocument> {
+    private fun searchByIlike(query: String, topK: Int, tenantId: String): List<VectorDocument> {
         val tokens = query.split(",")
             .map { it.trim() }
             .filter { it.isNotBlank() }
@@ -150,19 +151,21 @@ class FullTextSearchAdapter(
             return emptyList()
         }
 
-        // Build dynamic OR clause for up to 3 tokens
-        val whereClause = tokens.joinToString(" OR ") { "content ILIKE ?" }
+        // Build dynamic OR clause for up to 3 tokens wrapped in parentheses
+        val whereClause = "(${tokens.joinToString(" OR ") { "content ILIKE ?" }})"
         val likePatterns = tokens.map { buildIlikePattern(it) }
 
         val sql = """
             SELECT id, content, metadata
             FROM vector_store
             WHERE $whereClause
+            AND metadata->>'tenantId' = ?
             LIMIT ?
         """.trimIndent()
 
-        // Prepare arguments: dynamic parameters followed by topK limit
+        // Prepare arguments: dynamic parameters followed by tenantId and topK limit
         val args = likePatterns.toMutableList<Any>()
+        args.add(tenantId)
         args.add(topK)
 
         val results = jdbcTemplate.query(sql, { rs, _ ->

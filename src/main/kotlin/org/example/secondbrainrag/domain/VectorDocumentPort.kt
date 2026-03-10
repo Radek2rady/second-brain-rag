@@ -9,29 +9,30 @@ interface VectorDocumentPort {
     /**
      * Saves a list of documents into the vector store.
      */
-    fun save(documents: List<VectorDocument>)
+    fun save(documents: List<VectorDocument>, tenantId: String)
 
     /**
      * Saves a list of documents into the vector store in bulk format.
      */
-    fun saveAll(documents: List<VectorDocument>)
+    fun saveAll(documents: List<VectorDocument>, tenantId: String)
 
     /**
      * Searches for documents similar to the given query text.
      * 
      * @param query The text to search for
      * @param topK Number of top results to return
+     * @param tenantId The ID of the tenant searching
      * @return List of matching documents
      */
-    fun searchSimilar(query: String, topK: Int = 4): List<VectorDocument>
+    fun searchSimilar(query: String, topK: Int = 4, tenantId: String): List<VectorDocument>
 
     /**
-     * Retrieves all documents stored in the database.
+     * Retrieves all documents stored in the database for the given tenant.
      */
-    fun getAllDocuments(): List<VectorDocument>
+    fun getAllDocuments(tenantId: String): List<VectorDocument>
 
     /**
      * Deletes a specific document by its ID.
      */
-    fun deleteDocument(id: String)
+    fun deleteDocument(id: String, tenantId: String)
 }

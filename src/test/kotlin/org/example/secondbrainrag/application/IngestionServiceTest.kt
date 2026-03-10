@@ -31,16 +31,16 @@ class IngestionServiceTest : BehaviorSpec({
 
             // Capture the list of documents passed to saveAll
             val capturedDocuments = slot<List<VectorDocument>>()
-            every { vectorDocumentPort.saveAll(capture(capturedDocuments)) } returns Unit
+            every { vectorDocumentPort.saveAll(capture(capturedDocuments), "test-tenant") } returns Unit
 
-            ingestionService.ingest(longText, metadata)
+            ingestionService.ingest(longText, metadata, "test-tenant")
 
             Then("it should call splitText on the DocumentSplitterPort") {
                 verify(exactly = 1) { splitterPort.splitText(longText) }
             }
 
             Then("it should call saveAll on the VectorDocumentPort") {
-                verify(exactly = 1) { vectorDocumentPort.saveAll(any()) }
+                verify(exactly = 1) { vectorDocumentPort.saveAll(any(), "test-tenant") }
             }
 
             Then("the saved documents should have valid UUIDs, correct content and metadata") {

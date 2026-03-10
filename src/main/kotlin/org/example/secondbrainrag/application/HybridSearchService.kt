@@ -21,14 +21,14 @@ class HybridSearchService(
      * Performs hybrid search combining vector similarity and full-text search.
      * Always runs both search methods simultaneously and deduplicates their results.
      */
-    fun search(query: String, topK: Int = 15): List<VectorDocument> {
+    fun search(query: String, topK: Int = 15, tenantId: String): List<VectorDocument> {
         val expandedQuery = legalQueryExpander.expandQuery(query)
         logger.info("Performing hybrid search for expandedQuery='{}' (original='{}')", expandedQuery, query)
 
-        val ftResults = fullTextSearchPort.searchByKeyword(expandedQuery, topK)
-        val vectorResults = vectorDocumentPort.searchSimilar(expandedQuery, topK)
+        val ftResults = fullTextSearchPort.searchByKeyword(expandedQuery, topK, tenantId)
+        val vectorResults = vectorDocumentPort.searchSimilar(expandedQuery, topK, tenantId)
 
-        logger.info("Hybrid search: {} full-text results, {} vector results", ftResults.size, vectorResults.size)
+        logger.info("Hybrid search for tenant {}: {} full-text results, {} vector results", tenantId, ftResults.size, vectorResults.size)
 
         // Merge: full-text first, then vector (deduplicated by id)
         val seenIds = mutableSetOf<String>()
