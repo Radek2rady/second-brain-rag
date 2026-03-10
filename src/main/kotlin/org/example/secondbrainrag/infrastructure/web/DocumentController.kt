@@ -1,5 +1,6 @@
 package org.example.secondbrainrag.infrastructure.web
 
+import org.example.secondbrainrag.application.AuditService
 import org.example.secondbrainrag.application.DocumentService
 import org.example.secondbrainrag.application.FileIngestionService
 import org.example.secondbrainrag.application.IngestionService
@@ -20,7 +21,8 @@ class DocumentController(
     private val fileIngestionService: FileIngestionService,
     private val chatHistoryPort: ChatHistoryPort,
     private val vectorDocumentPort: VectorDocumentPort,
-    private val progressTracker: IngestionProgressTracker
+    private val progressTracker: IngestionProgressTracker,
+    private val auditService: AuditService
 ) {
 
     data class SaveRequest(val content: String, val metadata: Map<String, String>? = null)
@@ -48,6 +50,7 @@ class DocumentController(
         @RequestParam(defaultValue = "15") topK: Int, 
         principal: Principal
     ): List<VectorDocument> {
+        auditService.logAction(principal.name, principal.name, "SEARCH", "Query: $query, topK: $topK")
         return documentService.searchSimilar(query, topK, principal.name)
     }
 
@@ -92,12 +95,14 @@ class DocumentController(
 
     @DeleteMapping("/{id}")
     fun deleteDocument(@PathVariable id: String, principal: Principal): Map<String, String> {
+        auditService.logAction(principal.name, principal.name, "DELETE", "Document ID: $id")
         vectorDocumentPort.deleteDocument(id, principal.name)
         return mapOf("status" to "success", "message" to "Document $id deleted")
     }
 
     @PostMapping("/upload")
     fun uploadFile(@RequestParam("file") file: MultipartFile, principal: Principal): ResponseEntity<Map<String, String>> {
+        auditService.logAction(principal.name, principal.name, "UPLOAD", "File: ${file.originalFilename}")
         return try {
             val jobId = fileIngestionService.ingestFile(file, principal.name)
             ResponseEntity.accepted().body(mapOf(
