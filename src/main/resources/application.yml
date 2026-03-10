@@ -6,6 +6,10 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB  
 
+  sql:
+    init:
+      mode: always
+
   mvc:
     async:
       request-timeout: 3600000 # 1 hour for long embedding processes
@@ -16,6 +20,7 @@ spring:
     password: ${DB_BRAIN_RAG_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
+    defer-datasource-initialization: true
     open-in-view: false
     hibernate:
       ddl-auto: update

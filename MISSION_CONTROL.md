@@ -11,15 +11,35 @@ Vytvořit inteligentního asistenta, který umí odpovídat na dotazy na základ
 - [x] Implementace LLM Chat endpointu přes `ChatClient` a porty
 - [x] Backendové jádro RAG je plně funkční a otestované manuálně přes HTTP clienta (Alíkův test prošel!)
 - [x] Stabilizace kódu pomocí Unit testů v Kotest/MockK
-- [x] Implementace Chat History (perzistentní paměť konverze přes PostgreSQL) a CORS pro frontend
-- [ ] Frontend pro chatování (React/Vite) - **NA ŘADĚ**
+- [x] Implementace Chat History (perzistentní paměť konverze přes PostgreSQL)
+
+## 🔒 Phase 2: Security
+- [x] JWT Authentication
+- [x] Multi-tenant data isolation
+- [ ] DB Users & BCrypt - **IN PROGRESS**
+- [ ] RBAC (Role-Based Access Control) - **IN PROGRESS**
+- [ ] Audit Logging
+
+## ⚙️ Phase 3: Automation & Enhancements - ROADMAP
+- [ ] Google Drive Integration
+- [ ] Reranking (Cohere/BGE)
+
+## 💻 Phase 4: UI (Frontend) - ROADMAP
+- [x] CORS for frontend
+- [ ] React/Vite Chat Frontend - **IN PROGRESS**
 
 ## 🛠️ Tech Stack
-- **Backend:** Kotlin, Spring AI
-- **Vektorová DB:** Supabase (PostgreSQL + pgvector)
+- **Backend:** Kotlin, Spring AI, Spring Security, Spring Data JPA
+- **Database:** Supabase (PostgreSQL + pgvector)
+- **Frontend:** React, Vite, TailwindCSS
 - **LLM:** OpenAI (GPT-4o)
 - **Testing:** Kotest, MockK
 
-## 📝 Poznámky
-- UUID u dokumentů je striktně validováno obousměrně v adaptérech.
-- Ošetřeny Open-in-view warningy ze Spring JPA.
+## 📝 Notes
+- UUIDs are strictly validated across adapters.
+- Open-in-view warnings addressed in Spring JPA.
+
+## ⚠️ Known Issues
+- **Semantic Gap:** AI might struggle with specific names or terms in complex legal texts.
+- **PDF Layouts:** Complex tables or specific layouts from PDFs sometimes lose their format after chunking.
+- **Async Context Passing:** Security Context (and TenantID) must be explicitly passed into async methods (@Async) to avoid losing them on the new thread.

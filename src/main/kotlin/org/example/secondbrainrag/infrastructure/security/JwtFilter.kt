@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
 import org.springframework.util.StringUtils
@@ -19,7 +20,9 @@ class JwtFilter(private val tokenProvider: TokenProvider) : OncePerRequestFilter
         if (StringUtils.hasText(jwt)) {
             if (tokenProvider.validateToken(jwt!!)) {
                 val username = tokenProvider.getUsername(jwt)
-                val auth = UsernamePasswordAuthenticationToken(username, null, emptyList())
+                val roles = tokenProvider.getRoles(jwt)
+                val authorities = roles.map { SimpleGrantedAuthority(it) }
+                val auth = UsernamePasswordAuthenticationToken(username, null, authorities)
                 SecurityContextHolder.getContext().authentication = auth
                 logger.debug("Nastaven kontext autentizace pro uživatele: $username")
             } else {

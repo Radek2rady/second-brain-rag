@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileText, Paperclip, Loader2, Globe, HardDrive, AlertTriangle, ExternalLink, Blend } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Login from './Login';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -102,6 +103,9 @@ function ReferencesList({ references }: { references: string[] }) {
 
 /* ─── Main App ─── */
 export default function App() {
+  const [token, setToken] = useState<string | null>(localStorage.getItem('rag_token'));
+  const [roles, setRoles] = useState<string[]>(JSON.parse(localStorage.getItem('rag_roles') || '[]'));
+
   const [activeTab, setActiveTab] = useState<'chat' | 'knowledge'>('chat');
 
   // Chat state
@@ -135,13 +139,15 @@ export default function App() {
   }, [messages, isLoading, activeTab]);
 
   useEffect(() => {
-    const savedId = localStorage.getItem('rag_conversation_id');
-    if (savedId) {
-      setConversationId(savedId);
-      loadConversation(savedId);
+    if (token) {
+      const savedId = localStorage.getItem('rag_conversation_id');
+      if (savedId) {
+        setConversationId(savedId);
+        loadConversation(savedId);
+      }
+      fetchConversations();
     }
-    fetchConversations();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -152,7 +158,11 @@ export default function App() {
 
   const fetchConversations = async () => {
     try {
-      const res = await fetch('/api/documents/conversations');
+      const res = await fetch('http://localhost:8080/api/documents/conversations', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) setConversations(await res.json());
     } catch (e) { console.error(e); }
   };
@@ -165,7 +175,11 @@ export default function App() {
       setIsSidebarOpen(false);
     }
     try {
-      const res = await fetch(`/api/documents/chat/history?conversationId=${id}`);
+      const res = await fetch(`http://localhost:8080/api/documents/chat/history?conversationId=${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const history = await res.json();
         // History from backend doesn't have source/references, default to LOCAL
@@ -181,7 +195,11 @@ export default function App() {
   const loadDocuments = async () => {
     setIsDocumentsLoading(true);
     try {
-      const res = await fetch('/api/documents');
+      const res = await fetch('http://localhost:8080/api/documents', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) setDocuments(await res.json());
     } catch (e) { console.error(e); }
     setIsDocumentsLoading(false);
@@ -194,7 +212,12 @@ export default function App() {
   const handleDeleteDocument = async (id: string) => {
     if (!confirm('Opravdu chceš smazat tento dokument?')) return;
     try {
-      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      const res = await fetch(`http://localhost:8080/api/documents/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) setDocuments(prev => prev.filter(d => d.id !== id));
     } catch (e) { console.error(e); }
   };
@@ -232,8 +255,12 @@ export default function App() {
     formData.append('file', file);
 
     try {
-      const res = await fetch('/api/documents/upload', {
+      const res = await fetch('http://localhost:8080/api/documents/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // No Content-Type header is set, browser will automatically set multipart/form-data with bounds!
+        },
         body: formData,
       });
       const data = await res.json();
@@ -269,7 +296,11 @@ export default function App() {
       const params = new URLSearchParams({ query: userMessage });
       if (conversationId) params.append('conversationId', conversationId);
 
-      const response = await fetch(`/api/documents/chat?${params.toString()}`);
+      const response = await fetch(`http://localhost:8080/api/documents/chat?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('Network response was not ok');
 
       const data = await response.json();
@@ -298,6 +329,26 @@ export default function App() {
       setIsLoading(false);
     }
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem('rag_token');
+    localStorage.removeItem('rag_roles');
+    setToken(null);
+    setRoles([]);
+  };
+
+  if (!token) {
+    return (
+      <Login
+        onLoginSuccess={(newToken, newRoles) => {
+          localStorage.setItem('rag_token', newToken);
+          localStorage.setItem('rag_roles', JSON.stringify(newRoles));
+          setToken(newToken);
+          setRoles(newRoles);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
@@ -370,13 +421,20 @@ export default function App() {
           </div>
         </div>
 
-        <div className="p-4 mt-auto border-t border-slate-800">
+        <div className="p-4 mt-auto border-t border-slate-800 space-y-2">
           <button
             onClick={handleClearHistory}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors font-medium"
           >
             <Trash2 className="w-4 h-4" />
             Clear local context
+          </button>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors font-medium border border-slate-700/50"
+          >
+            <X className="w-4 h-4" />
+            Odhlásit
           </button>
         </div>
       </div>
@@ -395,8 +453,13 @@ export default function App() {
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
               <Bot className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-lg font-semibold text-slate-200 tracking-tight">
+            <h1 className="text-lg font-semibold text-slate-200 tracking-tight flex items-center gap-2">
               {activeTab === 'chat' ? 'Second Brain RAG' : 'Znalostní Databáze'}
+              {roles.length > 0 && (
+                <span className="text-[10px] font-medium uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                  {roles.join(', ')}
+                </span>
+              )}
             </h1>
           </div>
         </header>
