@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, Plus, MessageSquare, Trash2, Menu, X, Database, FileText, Paperclip, Loader2, Globe, HardDrive, AlertTriangle, ExternalLink, Blend } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Login from './Login';
+import AuditLogs from './AuditLogs';
+import UserList from './UserList';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -102,7 +105,10 @@ function ReferencesList({ references }: { references: string[] }) {
 
 /* ─── Main App ─── */
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'knowledge'>('chat');
+  const [token, setToken] = useState<string | null>(localStorage.getItem('rag_token'));
+  const [roles, setRoles] = useState<string[]>(JSON.parse(localStorage.getItem('rag_roles') || '[]'));
+
+  const [activeTab, setActiveTab] = useState<'chat' | 'knowledge' | 'audit' | 'users'>('chat');
 
   // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -122,6 +128,7 @@ export default function App() {
 
   // UI state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isAdmin = roles.includes('ROLE_ADMIN');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -135,13 +142,15 @@ export default function App() {
   }, [messages, isLoading, activeTab]);
 
   useEffect(() => {
-    const savedId = localStorage.getItem('rag_conversation_id');
-    if (savedId) {
-      setConversationId(savedId);
-      loadConversation(savedId);
+    if (token) {
+      const savedId = localStorage.getItem('rag_conversation_id');
+      if (savedId) {
+        setConversationId(savedId);
+        loadConversation(savedId);
+      }
+      fetchConversations();
     }
-    fetchConversations();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -152,7 +161,11 @@ export default function App() {
 
   const fetchConversations = async () => {
     try {
-      const res = await fetch('/api/documents/conversations');
+      const res = await fetch('http://localhost:8080/api/documents/conversations', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) setConversations(await res.json());
     } catch (e) { console.error(e); }
   };
@@ -165,7 +178,11 @@ export default function App() {
       setIsSidebarOpen(false);
     }
     try {
-      const res = await fetch(`/api/documents/chat/history?conversationId=${id}`);
+      const res = await fetch(`http://localhost:8080/api/documents/chat/history?conversationId=${id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) {
         const history = await res.json();
         // History from backend doesn't have source/references, default to LOCAL
@@ -181,7 +198,11 @@ export default function App() {
   const loadDocuments = async () => {
     setIsDocumentsLoading(true);
     try {
-      const res = await fetch('/api/documents');
+      const res = await fetch('http://localhost:8080/api/documents', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) setDocuments(await res.json());
     } catch (e) { console.error(e); }
     setIsDocumentsLoading(false);
@@ -194,7 +215,12 @@ export default function App() {
   const handleDeleteDocument = async (id: string) => {
     if (!confirm('Opravdu chceš smazat tento dokument?')) return;
     try {
-      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      const res = await fetch(`http://localhost:8080/api/documents/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (res.ok) setDocuments(prev => prev.filter(d => d.id !== id));
     } catch (e) { console.error(e); }
   };
@@ -232,8 +258,12 @@ export default function App() {
     formData.append('file', file);
 
     try {
-      const res = await fetch('/api/documents/upload', {
+      const res = await fetch('http://localhost:8080/api/documents/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+          // No Content-Type header is set, browser will automatically set multipart/form-data with bounds!
+        },
         body: formData,
       });
       const data = await res.json();
@@ -269,7 +299,11 @@ export default function App() {
       const params = new URLSearchParams({ query: userMessage });
       if (conversationId) params.append('conversationId', conversationId);
 
-      const response = await fetch(`/api/documents/chat?${params.toString()}`);
+      const response = await fetch(`http://localhost:8080/api/documents/chat?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('Network response was not ok');
 
       const data = await response.json();
@@ -298,6 +332,33 @@ export default function App() {
       setIsLoading(false);
     }
   };
+
+  const handleLogout = () => {
+    localStorage.removeItem('rag_token');
+    localStorage.removeItem('rag_roles');
+    setToken(null);
+    setRoles([]);
+  };
+
+  // RBAC Guard
+  useEffect(() => {
+    if ((activeTab === 'audit' || activeTab === 'users') && !isAdmin) {
+      setActiveTab('chat');
+    }
+  }, [activeTab, isAdmin]);
+
+  if (!token) {
+    return (
+      <Login
+        onLoginSuccess={(newToken, newRoles) => {
+          localStorage.setItem('rag_token', newToken);
+          localStorage.setItem('rag_roles', JSON.stringify(newRoles));
+          setToken(newToken);
+          setRoles(newRoles);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
@@ -351,6 +412,26 @@ export default function App() {
           </button>
         </div>
 
+        {isAdmin && (
+          <div className="px-3 py-2 space-y-1 mt-2 border-t border-slate-800">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2 mt-2">Admin Tools</div>
+            <button
+              onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm ${activeTab === 'users' ? 'bg-slate-800 text-purple-400' : 'text-slate-300 hover:bg-slate-800'}`}
+            >
+              <User className="w-4 h-4" />
+              Role & Uživatelé
+            </button>
+            <button
+              onClick={() => { setActiveTab('audit'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-lg transition-colors font-medium text-sm ${activeTab === 'audit' ? 'bg-slate-800 text-amber-400' : 'text-slate-300 hover:bg-slate-800'}`}
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Audit Dashboard
+            </button>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-3">
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">Historie konverzací</div>
           <div className="space-y-1">
@@ -370,13 +451,20 @@ export default function App() {
           </div>
         </div>
 
-        <div className="p-4 mt-auto border-t border-slate-800">
+        <div className="p-4 mt-auto border-t border-slate-800 space-y-2">
           <button
             onClick={handleClearHistory}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors font-medium"
           >
             <Trash2 className="w-4 h-4" />
             Clear local context
+          </button>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors font-medium border border-slate-700/50"
+          >
+            <X className="w-4 h-4" />
+            Odhlásit
           </button>
         </div>
       </div>
@@ -395,8 +483,17 @@ export default function App() {
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-sm">
               <Bot className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-lg font-semibold text-slate-200 tracking-tight">
-              {activeTab === 'chat' ? 'Second Brain RAG' : 'Znalostní Databáze'}
+            <h1 className="text-lg font-semibold text-slate-200 tracking-tight flex items-center gap-2">
+              {activeTab === 'chat' && 'Second Brain RAG'}
+              {activeTab === 'knowledge' && 'Znalostní Databáze'}
+              {activeTab === 'users' && 'Role & Uživatelé'}
+              {activeTab === 'audit' && 'Audit Dashboard'}
+
+              {roles.length > 0 && (
+                <span className="text-[10px] font-medium uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+                  {roles.join(', ')}
+                </span>
+              )}
             </h1>
           </div>
         </header>
@@ -541,7 +638,7 @@ export default function App() {
               </div>
             </footer>
           </>
-        ) : (
+        ) : activeTab === 'knowledge' ? (
           /* Knowledge Base Tab */
           <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
             <div className="max-w-4xl mx-auto space-y-6">
@@ -610,7 +707,19 @@ export default function App() {
               )}
             </div>
           </main>
-        )}
+        ) : activeTab === 'users' && isAdmin ? (
+          <main className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-950">
+            <div className="max-w-4xl mx-auto">
+              <UserList token={token} currentUsername={messages[0] ? token : 'TY'} />
+            </div>
+          </main>
+        ) : activeTab === 'audit' && isAdmin ? (
+          <main className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-950">
+            <div className="max-w-6xl mx-auto">
+              <AuditLogs token={token} />
+            </div>
+          </main>
+        ) : null}
       </div>
     </div>
   );

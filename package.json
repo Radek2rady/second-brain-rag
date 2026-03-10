@@ -1,0 +1,24 @@
+{
+  "name": "second-brain-rag",
+  "version": "1.0.0",
+  "description": "> **Your personal AI assistant that answers exclusively from your own documents.**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Radek2rady/second-brain-rag.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Radek2rady/second-brain-rag/issues"
+  },
+  "homepage": "https://github.com/Radek2rady/second-brain-rag#readme",
+  "dependencies": {
+    "pg": "^8.20.0"
+  }
+}
