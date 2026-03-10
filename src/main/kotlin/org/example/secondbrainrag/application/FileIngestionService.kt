@@ -24,7 +24,7 @@ class FileIngestionService(
     /**
      * Starts file ingestion asynchronously and returns a job ID for progress tracking.
      */
-    fun ingestFile(file: MultipartFile): String {
+    fun ingestFile(file: MultipartFile, tenantId: String): String {
         // Validate file size
         if (file.size > MAX_FILE_SIZE) {
             throw IllegalArgumentException("Soubor je příliš velký. Maximální velikost je 50MB.")
@@ -65,7 +65,7 @@ class FileIngestionService(
         )
 
         progressTracker.startJob(jobId, fileName)
-        processIngestionAsync(jobId, content, metadata, fileName)
+        processIngestionAsync(jobId, content, metadata, fileName, tenantId)
 
         return jobId
     }
@@ -74,11 +74,11 @@ class FileIngestionService(
      * Processes ingestion in a separate thread to avoid HTTP timeout.
      */
     @Async
-    fun processIngestionAsync(jobId: String, content: String, metadata: Map<String, String>, fileName: String) {
+    fun processIngestionAsync(jobId: String, content: String, metadata: Map<String, String>, fileName: String, tenantId: String) {
         try {
-            logger.info("[Job {}] Async ingestion started for '{}'", jobId, fileName)
+            logger.info("[Job {}] Async ingestion started for '{}' (tenant: {})", jobId, fileName, tenantId)
 
-            val totalChunks = ingestionService.ingestWithProgress(content, metadata) { total, processed ->
+            val totalChunks = ingestionService.ingestWithProgress(content, metadata, tenantId) { total, processed ->
                 progressTracker.updateProgress(jobId, total, processed)
                 logger.info("[Job {}] Progress: {}/{} chunks ({}%)",
                     jobId, processed, total,

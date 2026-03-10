@@ -25,8 +25,8 @@ class IngestionService(
      *
      * @return total number of chunks saved
      */
-    fun ingest(content: String, metadata: Map<String, String> = emptyMap()): Int {
-        logger.info("Starting ingestion: content length={} chars, metadata={}", content.length, metadata)
+    fun ingest(content: String, metadata: Map<String, String> = emptyMap(), tenantId: String): Int {
+        logger.info("Starting ingestion for tenant {}: content length={} chars, metadata={}", tenantId, content.length, metadata)
 
         val chunks = splitterPort.splitText(content)
         logger.info("Text split into {} chunks", chunks.size)
@@ -43,9 +43,9 @@ class IngestionService(
         logger.info("Saving {} documents in {} batches (batch size={})", documents.size, batches.size, BATCH_SIZE)
 
         batches.forEachIndexed { index, batch ->
-            logger.info("Saving batch {}/{} ({} documents)...", index + 1, batches.size, batch.size)
+            logger.info("Saving batch {}/{} ({} documents) for tenant {}...", index + 1, batches.size, batch.size, tenantId)
             try {
-                vectorDocumentPort.saveAll(batch)
+                vectorDocumentPort.saveAll(batch, tenantId)
                 logger.info("Batch {}/{} saved successfully", index + 1, batches.size)
             } catch (e: Exception) {
                 logger.error("Failed to save batch {}/{}: {}", index + 1, batches.size, e.message, e)
@@ -65,9 +65,10 @@ class IngestionService(
     fun ingestWithProgress(
         content: String,
         metadata: Map<String, String> = emptyMap(),
+        tenantId: String,
         onProgress: (totalChunks: Int, processedChunks: Int) -> Unit
     ): Int {
-        logger.info("Starting ingestion with progress: content length={} chars", content.length)
+        logger.info("Starting ingestion with progress for tenant {}: content length={} chars", tenantId, content.length)
 
         val chunks = splitterPort.splitText(content)
         logger.info("Text split into {} chunks", chunks.size)
@@ -82,9 +83,9 @@ class IngestionService(
         onProgress(documents.size, 0)
 
         batches.forEachIndexed { index, batch ->
-            logger.info("Saving batch {}/{} ({} documents)...", index + 1, batches.size, batch.size)
+            logger.info("Saving batch {}/{} ({} documents) for tenant {}...", index + 1, batches.size, batch.size, tenantId)
             try {
-                vectorDocumentPort.saveAll(batch)
+                vectorDocumentPort.saveAll(batch, tenantId)
                 processedCount += batch.size
                 onProgress(documents.size, processedCount)
                 logger.info("Batch {}/{} saved. Progress: {}/{}", index + 1, batches.size, processedCount, documents.size)

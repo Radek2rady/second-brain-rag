@@ -30,10 +30,10 @@ class HybridSearchServiceTest : BehaviorSpec({
             every { legalQueryExpander.expandQuery(query) } returns expandedQuery
             
             // Expected to be called with topK=15
-            every { fullTextSearchPort.searchByKeyword(expandedQuery, 15) } returns listOf(ftDoc)
-            every { vectorDocumentPort.searchSimilar(expandedQuery, 15) } returns listOf(vectorDoc1, duplicateDoc)
+            every { fullTextSearchPort.searchByKeyword(expandedQuery, 15, "test-tenant") } returns listOf(ftDoc)
+            every { vectorDocumentPort.searchSimilar(expandedQuery, 15, "test-tenant") } returns listOf(vectorDoc1, duplicateDoc)
 
-            val results = hybridSearchService.search(query)
+            val results = hybridSearchService.search(query, tenantId = "test-tenant")
 
             Then("it should query both full-text and vector ports and merge deduplicated results") {
                 results.size shouldBe 2
@@ -42,8 +42,8 @@ class HybridSearchServiceTest : BehaviorSpec({
                 
                 // Verify both ports and expander were called
                 verify(exactly = 1) { legalQueryExpander.expandQuery(query) }
-                verify(exactly = 1) { fullTextSearchPort.searchByKeyword(expandedQuery, 15) }
-                verify(exactly = 1) { vectorDocumentPort.searchSimilar(expandedQuery, 15) }
+                verify(exactly = 1) { fullTextSearchPort.searchByKeyword(expandedQuery, 15, "test-tenant") }
+                verify(exactly = 1) { vectorDocumentPort.searchSimilar(expandedQuery, 15, "test-tenant") }
             }
         }
 
@@ -52,10 +52,10 @@ class HybridSearchServiceTest : BehaviorSpec({
             val vectorDoc = VectorDocument(id = "vec-1", content = "Nějaký text")
 
             every { legalQueryExpander.expandQuery(query) } returns query
-            every { fullTextSearchPort.searchByKeyword(query, 15) } returns emptyList()
-            every { vectorDocumentPort.searchSimilar(query, 15) } returns listOf(vectorDoc)
+            every { fullTextSearchPort.searchByKeyword(query, 15, "test-tenant") } returns emptyList()
+            every { vectorDocumentPort.searchSimilar(query, 15, "test-tenant") } returns listOf(vectorDoc)
 
-            val results = hybridSearchService.search(query)
+            val results = hybridSearchService.search(query, tenantId = "test-tenant")
 
             Then("it should return only vector results") {
                 results.size shouldBe 1
