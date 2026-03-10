@@ -56,7 +56,7 @@ export default function UserList({ token, currentUsername }: UserListProps) {
                 const updatedUser = await res.json();
                 setUsers(users.map(u => u.id === userId ? updatedUser : u));
             } else {
-                alert('Chyba při změně role.');
+                alert('Error changing role.');
             }
         } catch (e) {
             console.error(e);
@@ -70,7 +70,7 @@ export default function UserList({ token, currentUsername }: UserListProps) {
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
                 <h2 className="font-semibold text-slate-200">User Management</h2>
                 <div className="text-sm text-slate-400">
-                    Uživatelů: {users.length}
+                    Users: {users.length}
                 </div>
             </div>
 
@@ -78,10 +78,10 @@ export default function UserList({ token, currentUsername }: UserListProps) {
                 <table className="w-full text-sm text-left">
                     <thead className="text-xs text-slate-400 uppercase bg-slate-800/50 border-b border-slate-700">
                         <tr>
-                            <th className="px-4 py-3">Uživatel</th>
-                            <th className="px-4 py-3">Oddělení</th>
+                            <th className="px-4 py-3">User</th>
+                            <th className="px-4 py-3">Department</th>
                             <th className="px-4 py-3">Role</th>
-                            <th className="px-4 py-3 text-right">Akce</th>
+                            <th className="px-4 py-3 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -89,7 +89,7 @@ export default function UserList({ token, currentUsername }: UserListProps) {
                             <tr>
                                 <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
                                     <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                                    Načítám uživatele...
+                                    Loading users...
                                 </td>
                             </tr>
                         ) : (
@@ -102,7 +102,7 @@ export default function UserList({ token, currentUsername }: UserListProps) {
                                         <span className="font-medium text-slate-300">{user.username}</span>
                                         {user.username === currentUsername && (
                                             <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded ml-1 border border-blue-500/30">
-                                                TY
+                                                YOU
                                             </span>
                                         )}
                                     </td>

@@ -27,17 +27,17 @@ class FileIngestionService(
     fun ingestFile(file: MultipartFile, tenantId: String): String {
         // Validate file size
         if (file.size > MAX_FILE_SIZE) {
-            throw IllegalArgumentException("Soubor je příliš velký. Maximální velikost je 50MB.")
+            throw IllegalArgumentException("File is too large. Maximum size is 50MB.")
         }
 
         // Validate file extension
         val extension = file.originalFilename
             ?.substringAfterLast('.', "")
             ?.lowercase()
-            ?: throw IllegalArgumentException("Soubor nemá platnou příponu.")
+            ?: throw IllegalArgumentException("File does not have a valid extension.")
 
         if (extension !in ALLOWED_EXTENSIONS) {
-            throw IllegalArgumentException("Nepodporovaný typ souboru. Povolené typy: ${ALLOWED_EXTENSIONS.joinToString(", ")}.")
+            throw IllegalArgumentException("Unsupported file type. Allowed types: ${ALLOWED_EXTENSIONS.joinToString(", ")}.")
         }
 
         val fileName = file.originalFilename ?: "unknown"
@@ -49,7 +49,7 @@ class FileIngestionService(
             else -> {
                 val text = file.inputStream.bufferedReader().readText()
                 if (text.isBlank()) {
-                    throw IllegalArgumentException("Soubor je prázdný.")
+                    throw IllegalArgumentException("File is empty.")
                 }
                 text
             }
