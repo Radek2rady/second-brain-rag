@@ -28,7 +28,6 @@ class LegalQueryExpander(
             5. Rule for liability: Include terms like 'danger of damage to property' if the user asks about damage.
             6. No guessing: If you are not 100% sure of a section number, DO NOT generate it.
             7. If the original query contains '§' or 'section' followed by a number, include it.
-
             Query: {query}
         """.trimIndent()
 
