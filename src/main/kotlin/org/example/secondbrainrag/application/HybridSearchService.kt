@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 class HybridSearchService(
     private val vectorDocumentPort: VectorDocumentPort,
     private val fullTextSearchPort: FullTextSearchPort,
-    private val legalQueryExpander: LegalQueryExpander,
     private val rerankPort: org.example.secondbrainrag.domain.RerankPort
 ) {
 
@@ -20,9 +19,8 @@ class HybridSearchService(
      * Performs hybrid search combining vector similarity and full-text search,
      * followed by a reranking stage for high precision.
      */
-    fun search(query: String, topK: Int = 15, tenantId: String): List<VectorDocument> {
-        val expandedQuery = legalQueryExpander.expandQuery(query)
-        logger.info("Performing hybrid search for expandedQuery='{}' (original='{}')", expandedQuery, query)
+    fun search(originalQuery: String, expandedQuery: String, topK: Int = 15, tenantId: String): List<VectorDocument> {
+        logger.info("Performing hybrid search for expandedQuery='{}' (original='{}')", expandedQuery, originalQuery)
 
         // Capture more candidates for reranking (up to 20)
         val candidateLimit = 20
@@ -50,8 +48,8 @@ class HybridSearchService(
         val totalCandidates = candidates.take(candidateLimit)
         
         // 2. Reranking Stage - ALWAYS use the ORIGINAL query for maximum precision
-        logger.info("Reranking {} candidates via Cohere using ORIGINAL query: '{}'", totalCandidates.size, query)
-        val rerankedResults = rerankPort.rerank(query, totalCandidates)
+        logger.info("Reranking {} candidates via Cohere using ORIGINAL query: '{}'", totalCandidates.size, originalQuery)
+        val rerankedResults = rerankPort.rerank(originalQuery, totalCandidates)
 
         // 3. Thresholding & Top-K (top 5 with score > 0.05)
         val threshold = 0.05

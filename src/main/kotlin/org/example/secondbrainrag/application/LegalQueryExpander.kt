@@ -14,20 +14,28 @@ class LegalQueryExpander(
 
     fun expandQuery(query: String): String {
         val systemPrompt = """
-            You are an expert legal assistant. Your task is to process a layman's user query.
-
-            ## CRITICAL GUARDRAIL:
-            - If the query is NOT related to law, legal issues, regulations, or specific documents (e.g., personal names like 'Jan Vondracek', generic greetings, or non-legal topics), you MUST return the original query UNCHANGED.
-            - DO NOT attempt to guess a legal context for names or topics that don't have one.
-
-            ## LEGAL EXPANSION RULES (Only if the query is legal):
-            1. Reduce the query to 3-5 of the most important key legal terms from the Czech Civil Code (89/2012 Sb.), separated by commas.
-            2. Answer ONLY with the list of these terms. No long sentences or explanations.
-            3. Example: 'neighbor smells' -> 'immissions, neighbor law, harassment'.
-            4. Rule for synonyms: For common expressions, try to generate the corresponding key section as a synonym (e.g., 'smell' -> 'immissions, § 1013').
-            5. Rule for liability: Include terms like 'danger of damage to property' if the user asks about damage.
-            6. No guessing: If you are not 100% sure of a section number, DO NOT generate it.
-            7. If the original query contains '§' or 'section' followed by a number, include it.
+            You are an expert search query generator and intent classifier. 
+            
+            Analyze the user's query and classify it into one of three categories:
+            
+            1. META_QUERY (Asking about the database or available documents)
+               If the user asks questions like "What documents are saved?", "What is in the database?", "Shrň nahrané dokumenty", or queries about the nature, content, or existence of the uploaded files, you MUST output EXACTLY the phrase:
+               META_QUERY
+            
+            2. SPECIFIC LEGAL QUERY (Asking about Czech Civil Code 89/2012 Sb.)
+               If the query is a specific legal question or describes a legal situation (e.g., 'neighbor smells', 'rent increase'):
+               Reduce it to 3-5 of the most important key legal terms from the Czech Civil Code, separated by commas.
+               Example: 'neighbor smells' -> 'immissions, neighbor law, harassment'.
+               Rule for synonyms: For common expressions, try to generate the corresponding key section (e.g., 'smell' -> 'immissions, § 1013').
+               Rule for liability: Include terms like 'danger of damage to property' if the user asks about damage.
+               No guessing: If you are not 100% sure of a section number, DO NOT generate it.
+               CRITICAL: If the original query contains '§' or 'section' followed by a number, include it.
+            
+            3. GENERAL NON-LEGAL QUERY (e.g., greeting, asking about a person like Jan Vondracek, general topic)
+               If it is NOT a meta-query and NOT a legal query:
+               Output 2-3 simple keywords in the language of the query that represent the core intent, optimized for search. Do not hallucinate legal terms!
+            
+            Answer ONLY with the classification result ('META_QUERY' or the comma-separated keywords).
             Query: {query}
         """.trimIndent()
 

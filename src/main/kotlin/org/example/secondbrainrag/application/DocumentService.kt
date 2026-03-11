@@ -11,7 +11,8 @@ class DocumentService(
     private val chatPort: ChatPort,
     private val chatHistoryPort: ChatHistoryPort,
     private val webSearchPort: WebSearchPort,
-    private val hybridSearchService: HybridSearchService
+    private val hybridSearchService: HybridSearchService,
+    private val legalQueryExpander: LegalQueryExpander
 ) {
 
     private val logger = LoggerFactory.getLogger(DocumentService::class.java)
@@ -30,56 +31,79 @@ class DocumentService(
         // 1. Retrieve history
         val history = chatHistoryPort.getLastMessages(activeConversationId, limit = 10)
 
-        // 2. Retrieve relevant local documents via hybrid search (vector + full-text)
-        val similarDocuments = hybridSearchService.search(query, tenantId = tenantId)
-        val hasLocalResults = similarDocuments.isNotEmpty()
-        logger.info("chat query='{}': {} local documents found (hasLocalResults={})", query, similarDocuments.size, hasLocalResults)
+        // 2. Classify Intent & Expand Query
+        val expandedQuery = legalQueryExpander.expandQuery(query)
+        val isMetaQuery = expandedQuery.equals("META_QUERY", ignoreCase = true)
 
-        // 3. Determine if we need web search (0 local results = trigger web search)
+        var similarDocuments: List<VectorDocument> = emptyList()
         var webResults: List<WebSearchResult> = emptyList()
-        if (!hasLocalResults) {
-            logger.info("No local documents found for query='$query', falling back to web search")
-            webResults = try {
-                webSearchPort.search(query)
-            } catch (e: Exception) {
-                logger.warn("Web search failed for query='$query': ${e.message}")
-                emptyList()
+        var localReferences: List<String> = emptyList()
+        val source: AnswerSource
+        val context: String
+
+        if (isMetaQuery) {
+            // META QUERY ROUTING: Bypass vector/hybrid search entirely
+            logger.info("chat query='{}': Detected as META_QUERY. Fetching full database metadata.", query)
+            val allFiles = vectorDocumentPort.findAllMetadata(tenantId)
+            
+            source = AnswerSource.LOCAL
+            localReferences = allFiles
+            context = if (allFiles.isNotEmpty()) {
+                "=== DATABASE OVERVIEW ===\nUser's database contains the following uploaded files:\n" + 
+                allFiles.joinToString(separator = "\n") { "- $it" }
+            } else {
+                "The database is currently empty. No documents have been uploaded."
             }
-        }
+        } else {
+            // STANDARD ROUTING: Retrieve relevant local documents via hybrid search
+            similarDocuments = hybridSearchService.search(query, expandedQuery, tenantId = tenantId)
+            val hasLocalResults = similarDocuments.isNotEmpty()
+            logger.info("chat query='{}': {} local documents found (hasLocalResults={})", query, similarDocuments.size, hasLocalResults)
 
-        val hasWebResults = webResults.isNotEmpty()
-
-        // 4. Determine source
-        val source = when {
-            hasLocalResults && hasWebResults -> AnswerSource.HYBRID
-            hasWebResults -> AnswerSource.WEB
-            else -> AnswerSource.LOCAL
-        }
-
-        // 5. Build context (include metadata markers for source citation)
-        val localContext = if (hasLocalResults) {
-            similarDocuments.joinToString(separator = "\n\n") {
-                val fileInfo = it.metadata["fileName"] ?: it.metadata["source"] ?: "Unknown File"
-                "--- SOURCE: $fileInfo ---\n${it.content}"
+            // Determine if we need web search (0 local results = trigger web search)
+            if (!hasLocalResults) {
+                logger.info("No local documents found for query='$query', falling back to web search")
+                webResults = try {
+                    webSearchPort.search(query)
+                } catch (e: Exception) {
+                    logger.warn("Web search failed for query='$query': ${e.message}")
+                    emptyList()
+                }
             }
-        } else ""
 
-        val webContext = if (hasWebResults) {
-            webResults.joinToString(separator = "\n\n") { "[${it.title}] (${it.url}): ${it.content}" }
-        } else ""
+            val hasWebResults = webResults.isNotEmpty()
 
-        val context = when (source) {
-            AnswerSource.LOCAL -> localContext
-            AnswerSource.WEB -> webContext
-            AnswerSource.HYBRID -> "=== LOCAL DOCUMENTS ===\n$localContext\n\n=== WEB SOURCES ===\n$webContext"
+            source = when {
+                hasLocalResults && hasWebResults -> AnswerSource.HYBRID
+                hasWebResults -> AnswerSource.WEB
+                else -> AnswerSource.LOCAL
+            }
+
+            val localContext = if (hasLocalResults) {
+                similarDocuments.joinToString(separator = "\n\n") {
+                    val fileInfo = it.metadata["fileName"] ?: it.metadata["source"] ?: "Unknown File"
+                    "--- SOURCE: $fileInfo ---\n${it.content}"
+                }
+            } else ""
+
+            val webContext = if (hasWebResults) {
+                webResults.joinToString(separator = "\n\n") { "[${it.title}] (${it.url}): ${it.content}" }
+            } else ""
+
+            context = when (source) {
+                AnswerSource.LOCAL -> localContext
+                AnswerSource.WEB -> webContext
+                AnswerSource.HYBRID -> "=== LOCAL DOCUMENTS ===\n$localContext\n\n=== WEB SOURCES ===\n$webContext"
+            }
+            
+            localReferences = similarDocuments.map { (it.metadata["fileName"] ?: it.metadata["source"] ?: "Unknown File").toString() }.distinct()
         }
 
-        // 6. Build references (combine web URLs and local file names)
-        val localReferences = similarDocuments.map { (it.metadata["fileName"] ?: it.metadata["source"] ?: "Unknown File").toString() }.distinct()
+        // Build final references
         val webReferences = webResults.map { it.url }
         val references = localReferences + webReferences
 
-        // 7. Generate response with source hint for transparency
+        // Generate response with source hint for transparency
         val sourceHint = source.name
         val response = chatPort.generateResponse(query, context, history, sourceHint)
 

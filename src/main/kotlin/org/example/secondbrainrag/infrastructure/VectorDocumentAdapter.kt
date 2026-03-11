@@ -102,4 +102,9 @@ class VectorDocumentAdapter(
     override fun countAll(): Long {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM vector_store", Long::class.java) ?: 0L
     }
+
+    override fun findAllMetadata(tenantId: String): List<String> {
+        val sql = "SELECT DISTINCT metadata->>'fileName' as file_name FROM vector_store WHERE metadata->>'tenantId' = ? AND metadata->>'fileName' IS NOT NULL"
+        return jdbcTemplate.queryForList(sql, String::class.java, tenantId)
+    }
 }

@@ -41,4 +41,10 @@ interface VectorDocumentPort {
      * This is intended for admin dashboard purposes.
      */
     fun countAll(): Long
+
+    /**
+     * Retrieves unique document filenames for a given tenant.
+     * Used for meta-queries about the database content.
+     */
+    fun findAllMetadata(tenantId: String): List<String>
 }
