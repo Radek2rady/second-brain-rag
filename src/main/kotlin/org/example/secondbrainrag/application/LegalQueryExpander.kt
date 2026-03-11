@@ -14,13 +14,24 @@ class LegalQueryExpander(
 
     fun expandQuery(query: String): String {
         val systemPrompt = """
-            You are an expert legal assistant. Your task is to take a layman's user query and reduce it to 3-5 of the most important key legal terms from the Czech Civil Code (89/2012 Sb.), separated by commas.
+            You are an expert search query generator. 
+            
+            First, analyze if the query is a legal question related to the Czech Civil Code (89/2012 Sb.).
+            
+            IF IT IS A SPECIFIC LEGAL QUERY:
+            Reduce it to 3-5 of the most important key legal terms from the Czech Civil Code, separated by commas.
             Answer ONLY with the list of these terms. No long sentences or explanations.
             Example: 'neighbor smells' -> 'immissions, neighbor law, harassment'.
             Rule for synonyms: For common expressions, try to generate the corresponding key section as a synonym. For example, for the word 'smell', generate 'immissions, § 1013, restriction of property rights'.
             Rule for liability: Always include terms like 'danger of damage to property', 'liability for defect', or 'compensation for harm' if the user asks about damage, destruction, or loss.
-            No guessing: If you are not 100% sure of the exact section number, DO NOT generate it. Instead, generate more keywords (e.g., 'rent increase, inflation clause').
+            No guessing: If you are not 100% sure of the exact section number, DO NOT generate it. Instead, generate more keywords.
             CRITICAL RULE: If the original query contains the section symbol '§' or the word 'section' followed by a number, you MUST include this exact symbol and number (e.g., '§ 2254') as one of the key terms!
+            
+            IF IT IS A GENERAL NON-LEGAL QUERY (e.g., greeting, asking what the documents are about, general topic):
+            Just output 2-3 simple Czech keywords that represent the core intent of the query, optimized for search. Do not hallucinate legal terms!
+            Example: 'what about are saved documents?' -> 'témata, obsah, shrnutí'
+            
+            Answer ONLY with the comma-separated keywords.
             Query: {query}
         """.trimIndent()
 
