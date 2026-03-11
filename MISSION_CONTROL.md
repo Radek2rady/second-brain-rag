@@ -23,7 +23,7 @@ Create an intelligent assistant capable of answering queries based on personal d
 
 ## ⚙️ Phase 3: Automation & Enhancements - NEXT
 - [ ] **Google Drive Integration:** Automatic ingestion adapter for cloud documents.
-- [ ] **Reranking:** Integrate Cohere or BGE reranker to improve retrieval precision.
+- [x] **Reranking:** Integrate Cohere Reranker to improve retrieval precision - COMPLETED
 - [ ] **Advanced PDF Processing:** Improved layout analysis for complex tables.
 
 ## 💻 Phase 4: UI (Frontend) - IN PROGRESS

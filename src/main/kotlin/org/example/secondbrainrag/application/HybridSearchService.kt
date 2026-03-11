@@ -10,46 +10,66 @@ import org.slf4j.LoggerFactory
 class HybridSearchService(
     private val vectorDocumentPort: VectorDocumentPort,
     private val fullTextSearchPort: FullTextSearchPort,
-    private val legalQueryExpander: LegalQueryExpander
+    private val legalQueryExpander: LegalQueryExpander,
+    private val rerankPort: org.example.secondbrainrag.domain.RerankPort
 ) {
 
     private val logger = LoggerFactory.getLogger(HybridSearchService::class.java)
 
-    // Companion object no longer needed for regex as it's handled in the adapter
-
     /**
-     * Performs hybrid search combining vector similarity and full-text search.
-     * Always runs both search methods simultaneously and deduplicates their results.
+     * Performs hybrid search combining vector similarity and full-text search,
+     * followed by a reranking stage for high precision.
      */
     fun search(query: String, topK: Int = 15, tenantId: String): List<VectorDocument> {
         val expandedQuery = legalQueryExpander.expandQuery(query)
         logger.info("Performing hybrid search for expandedQuery='{}' (original='{}')", expandedQuery, query)
 
-        val ftResults = fullTextSearchPort.searchByKeyword(expandedQuery, topK, tenantId)
-        val vectorResults = vectorDocumentPort.searchSimilar(expandedQuery, topK, tenantId)
+        // Capture more candidates for reranking (up to 20)
+        val candidateLimit = 20
+        val ftResults = fullTextSearchPort.searchByKeyword(expandedQuery, candidateLimit, tenantId)
+        val vectorResults = vectorDocumentPort.searchSimilar(expandedQuery, candidateLimit, tenantId)
 
         logger.info("Hybrid search for tenant {}: {} full-text results, {} vector results", tenantId, ftResults.size, vectorResults.size)
 
         // Merge: full-text first, then vector (deduplicated by id)
         val seenIds = mutableSetOf<String>()
-        val merged = mutableListOf<VectorDocument>()
+        val candidates = mutableListOf<VectorDocument>()
 
-        // Full-text results first (higher keyword precision)
         for (doc in ftResults) {
             if (seenIds.add(doc.id)) {
-                merged.add(doc)
+                candidates.add(doc)
             }
         }
 
-        // Then vector results (semantic similarity)
         for (doc in vectorResults) {
             if (seenIds.add(doc.id)) {
-                merged.add(doc)
+                candidates.add(doc)
             }
         }
 
-        val finalResults = merged.take(topK)
-        logger.info("Hybrid merged total: {} unique results (trimmed to topK={})", finalResults.size, topK)
+        val totalCandidates = candidates.take(candidateLimit)
+        
+        // 2. Reranking Stage - ALWAYS use the ORIGINAL query for maximum precision
+        logger.info("Reranking {} candidates via Cohere using ORIGINAL query: '{}'", totalCandidates.size, query)
+        val rerankedResults = rerankPort.rerank(query, totalCandidates)
+
+        // 3. Thresholding & Top-K (top 5 with score > 0.05)
+        val threshold = 0.05
+        val finalResults = rerankedResults
+            .sortedByDescending { it.score }
+            .onEachIndexed { index, result -> 
+                if (index < 10) {
+                    logger.debug("Rerank Result #{} [score={}] content snippet: '{}...'", 
+                        index + 1, String.format("%.4f", result.score), result.document.content.take(60))
+                }
+            }
+            .filter { it.score > threshold }
+            .take(5)
+            .map { it.document }
+
+        logger.info("Reranking completed: {}/{} candidates passed threshold (>{}) and top-K limit", 
+            finalResults.size, totalCandidates.size, threshold)
+        
         return finalResults
     }
 }

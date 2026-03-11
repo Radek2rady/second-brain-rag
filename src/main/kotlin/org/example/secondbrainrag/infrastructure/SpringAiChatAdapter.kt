@@ -53,8 +53,8 @@ class SpringAiChatAdapter(
             Your goal is to answer user queries using the provided context from the user's personal documents.
             
             STRICT GUIDELINES:
-            1. LANGUAGE DETECTION: Always detect the language of the user's query.
-            2. MULTILINGUAL RESPONSES: You MUST respond in the SAME language as the user's query. Even if the source documents are in another language (e.g., Czech), you must translate the summary and answer into the user's language.
+            1. LANGUAGE DETECTION & RESPONSE: Always respond in the SAME language that the user used for their query. If the user asks in Czech, respond in Czech. If in English, respond in English.
+            2. TRANSLATION: You may receive context in different languages (English/Czech). Always translate the relevant information from the context into the user's language in your response.
             3. CITATIONS: When using information from the provided context, you MUST cite the source using brackets like [1], [2], etc.
             4. SOURCES: Always provide at least 1-2 citations if the context allows.
             5. UNCERTAINTY: If you cannot find the answer in the provided context, explicitly state that you are answering from your general knowledge, but still try to be helpful.

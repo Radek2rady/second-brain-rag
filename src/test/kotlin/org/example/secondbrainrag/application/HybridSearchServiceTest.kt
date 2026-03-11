@@ -15,7 +15,8 @@ class HybridSearchServiceTest : BehaviorSpec({
     val vectorDocumentPort = mockk<VectorDocumentPort>()
     val fullTextSearchPort = mockk<FullTextSearchPort>()
     val legalQueryExpander = mockk<LegalQueryExpander>()
-    val hybridSearchService = HybridSearchService(vectorDocumentPort, fullTextSearchPort, legalQueryExpander)
+    val rerankPort = mockk<org.example.secondbrainrag.domain.RerankPort>()
+    val hybridSearchService = HybridSearchService(vectorDocumentPort, fullTextSearchPort, legalQueryExpander, rerankPort)
 
     Given("a HybridSearchService with mocked ports") {
 
@@ -29,37 +30,64 @@ class HybridSearchServiceTest : BehaviorSpec({
             // Mock the expansion
             every { legalQueryExpander.expandQuery(query) } returns expandedQuery
             
-            // Expected to be called with topK=15
-            every { fullTextSearchPort.searchByKeyword(expandedQuery, 15, "test-tenant") } returns listOf(ftDoc)
-            every { vectorDocumentPort.searchSimilar(expandedQuery, 15, "test-tenant") } returns listOf(vectorDoc1, duplicateDoc)
+            // Expected to be called with candidateLimit=20
+            every { fullTextSearchPort.searchByKeyword(expandedQuery, 20, "test-tenant") } returns listOf(ftDoc)
+            every { vectorDocumentPort.searchSimilar(expandedQuery, 20, "test-tenant") } returns listOf(vectorDoc1, duplicateDoc)
+
+            // Mock reranking - should be called with ORIGINAL query, not expandedQuery
+            every { rerankPort.rerank(query, any()) } returns listOf(
+                org.example.secondbrainrag.domain.RerankedDocument(ftDoc, 0.95),
+                org.example.secondbrainrag.domain.RerankedDocument(vectorDoc1, 0.8)
+            )
 
             val results = hybridSearchService.search(query, tenantId = "test-tenant")
 
-            Then("it should query both full-text and vector ports and merge deduplicated results") {
+            Then("it should query ports, merge candidates, and rerank them using ORIGINAL query") {
                 results.size shouldBe 2
-                results[0].id shouldBe "ft-1" // fulltext has priority
+                results[0].id shouldBe "ft-1"
                 results[1].id shouldBe "vec-1"
                 
-                // Verify both ports and expander were called
                 verify(exactly = 1) { legalQueryExpander.expandQuery(query) }
-                verify(exactly = 1) { fullTextSearchPort.searchByKeyword(expandedQuery, 15, "test-tenant") }
-                verify(exactly = 1) { vectorDocumentPort.searchSimilar(expandedQuery, 15, "test-tenant") }
+                verify(exactly = 1) { fullTextSearchPort.searchByKeyword(expandedQuery, 20, "test-tenant") }
+                verify(exactly = 1) { vectorDocumentPort.searchSimilar(expandedQuery, 20, "test-tenant") }
+                verify(exactly = 1) { rerankPort.rerank(query, any()) } // Check original query
             }
         }
 
-        When("full-text returns empty results") {
-            val query = "obecný dotaz"
-            val vectorDoc = VectorDocument(id = "vec-1", content = "Nějaký text")
+        When("reranking score is just above lower threshold") {
+            val query = "marginal relevance query"
+            val doc = VectorDocument(id = "marg-1", content = "Marginal relevance")
 
             every { legalQueryExpander.expandQuery(query) } returns query
-            every { fullTextSearchPort.searchByKeyword(query, 15, "test-tenant") } returns emptyList()
-            every { vectorDocumentPort.searchSimilar(query, 15, "test-tenant") } returns listOf(vectorDoc)
+            every { fullTextSearchPort.searchByKeyword(query, 20, "test-tenant") } returns emptyList()
+            every { vectorDocumentPort.searchSimilar(query, 20, "test-tenant") } returns listOf(doc)
+            every { rerankPort.rerank(query, any()) } returns listOf(
+                org.example.secondbrainrag.domain.RerankedDocument(doc, 0.06) // above 0.05
+            )
 
             val results = hybridSearchService.search(query, tenantId = "test-tenant")
 
-            Then("it should return only vector results") {
+            Then("it should return the result (0.06 > 0.05)") {
                 results.size shouldBe 1
-                results[0].id shouldBe "vec-1"
+                results[0].id shouldBe "marg-1"
+            }
+        }
+
+        When("reranking score is below lower threshold") {
+            val query = "very low score query"
+            val doc = VectorDocument(id = "low-1", content = "Very low relevance")
+
+            every { legalQueryExpander.expandQuery(query) } returns query
+            every { fullTextSearchPort.searchByKeyword(query, 20, "test-tenant") } returns emptyList()
+            every { vectorDocumentPort.searchSimilar(query, 20, "test-tenant") } returns listOf(doc)
+            every { rerankPort.rerank(query, any()) } returns listOf(
+                org.example.secondbrainrag.domain.RerankedDocument(doc, 0.04) // below 0.05
+            )
+
+            val results = hybridSearchService.search(query, tenantId = "test-tenant")
+
+            Then("it should return empty list") {
+                results.size shouldBe 0
             }
         }
     }
