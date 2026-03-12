@@ -12,6 +12,9 @@ class ChatMessageJpaEntity(
     
     @Column(nullable = false)
     val conversationId: String,
+
+    @Column(nullable = false)
+    val tenantId: String,
     
     @Column(nullable = false)
     val role: String,
@@ -25,6 +28,7 @@ class ChatMessageJpaEntity(
     // Required by JPA
     protected constructor() : this(
         conversationId = "",
+        tenantId = "",
         role = "",
         content = ""
     )

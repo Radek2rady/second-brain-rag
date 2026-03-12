@@ -29,7 +29,7 @@ class DocumentService(
         val activeConversationId = conversationId ?: UUID.randomUUID().toString()
 
         // 1. Retrieve history
-        val history = chatHistoryPort.getLastMessages(activeConversationId, limit = 10)
+        val history = chatHistoryPort.getLastMessages(activeConversationId, tenantId, limit = 10)
 
         // 2. Classify Intent & Expand Query
         val expandedQuery = legalQueryExpander.expandQuery(query)
@@ -108,8 +108,8 @@ class DocumentService(
         val response = chatPort.generateResponse(query, context, history, sourceHint)
 
         // 8. Save history
-        chatHistoryPort.saveMessage(activeConversationId, ChatMessage(role = "user", content = query))
-        chatHistoryPort.saveMessage(activeConversationId, ChatMessage(role = "assistant", content = response))
+        chatHistoryPort.saveMessage(activeConversationId, tenantId, ChatMessage(role = "user", content = query))
+        chatHistoryPort.saveMessage(activeConversationId, tenantId, ChatMessage(role = "assistant", content = response))
 
         return ChatResponseDomain(
             conversationId = activeConversationId,

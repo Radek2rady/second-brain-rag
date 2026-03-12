@@ -80,13 +80,13 @@ class DocumentController(
     }
 
     @GetMapping("/conversations")
-    fun getConversations(): List<String> {
-        return chatHistoryPort.getConversations()
+    fun getConversations(principal: Principal): List<String> {
+        return chatHistoryPort.getConversations(principal.name)
     }
 
     @GetMapping("/chat/history")
-    fun getChatHistory(@RequestParam conversationId: String): List<Map<String, String>> {
-        return chatHistoryPort.getLastMessages(conversationId, 50).map {
+    fun getChatHistory(@RequestParam conversationId: String, principal: Principal): List<Map<String, String>> {
+        return chatHistoryPort.getLastMessages(conversationId, principal.name, 50).map {
             mapOf("role" to it.role, "content" to it.content)
         }
     }
