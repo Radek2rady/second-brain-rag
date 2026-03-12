@@ -1,0 +1,7 @@
+cohere:
+  api:
+    key: "dummy-key-for-testing"
+spring:
+  ai:
+    openai:
+      api-key: "dummy-key"
