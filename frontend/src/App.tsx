@@ -23,6 +23,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadAccessLevel, setUploadAccessLevel] = useState('PRIVATE');
 
   // Chat Hook
   const {
@@ -50,7 +51,7 @@ export default function App() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await uploadFile(file, () => {
+      await uploadFile(file, uploadAccessLevel, () => {
         if (activeTab === 'knowledge') {
           loadDocuments();
         }
@@ -117,6 +118,9 @@ export default function App() {
             isUploading={isUploading}
             fileInputRef={fileInputRef as React.RefObject<HTMLInputElement>}
             handleDeleteDocument={handleDeleteDocument}
+            isAdmin={isAdmin}
+            uploadAccessLevel={uploadAccessLevel}
+            setUploadAccessLevel={setUploadAccessLevel}
           />
         ) : activeTab === 'users' && isAdmin ? (
           <main className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-950">

@@ -38,13 +38,14 @@ export function useKnowledgeBase(token: string | null, autoLoad: boolean = false
     } catch (e) { console.error(e); }
   };
 
-  const uploadFile = async (file: File, onSuccess?: () => void) => {
+  const uploadFile = async (file: File, accessLevel: string, onSuccess?: () => void) => {
     if (!token) return;
     setIsUploading(true);
     setUploadStatus(`Uploading "${file.name}"...`);
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('accessLevel', accessLevel);
 
     try {
       const response = await fetch('http://localhost:8080/api/documents/upload', {
