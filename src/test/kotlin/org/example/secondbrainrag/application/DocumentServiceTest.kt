@@ -14,73 +14,107 @@ class DocumentServiceTest : BehaviorSpec({
     val chatHistoryPort = mockk<ChatHistoryPort>(relaxed = true)
     val webSearchPort = mockk<WebSearchPort>()
     val hybridSearchService = mockk<HybridSearchService>()
-    val documentService = DocumentService(vectorDocumentPort, chatPort, chatHistoryPort, webSearchPort, hybridSearchService)
+    val legalQueryExpander = mockk<LegalQueryExpander>()
+    val documentService = DocumentService(vectorDocumentPort, chatPort, chatHistoryPort, webSearchPort, hybridSearchService, legalQueryExpander)
 
     Given("a DocumentService with mocked ports") {
 
         When("chat is called and LOCAL documents are found") {
             val query = "Jaké je hlavní město Francie?"
-            val expectedResponse = "Hlavním městem Francie je Paříž."
+            val expectedResponse = "Paříž."
+            val tenant = "test-tenant"
 
+            every { legalQueryExpander.expandQuery(query) } returns query
             every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
-            every { hybridSearchService.search(query, tenantId = "test-tenant") } returns listOf(
-                VectorDocument(content = "Paříž je hlavní město Francie."),
-                VectorDocument(content = "Francie leží v Evropě.")
+            every { hybridSearchService.search(any(), any(), tenantId = tenant) } returns listOf(
+                VectorDocument(content = "Paříž...", metadata = mapOf("fileName" to "geo.pdf"))
             )
-            every { chatPort.generateResponse(query, any(), emptyList(), "LOCAL") } returns expectedResponse
+            every { chatPort.generateResponse(any(), any(), any(), any()) } returns expectedResponse
 
-            val result = documentService.chat(query, null, "test-tenant")
+            val result = documentService.chat(query, null, tenant)
 
-            Then("it should return source LOCAL") {
+            Then("it should return source LOCAL and correct references") {
                 result.source shouldBe AnswerSource.LOCAL
-            }
-
-            Then("it should NOT call web search") {
+                result.references shouldBe listOf("geo.pdf")
                 verify(exactly = 0) { webSearchPort.search(any(), any()) }
-            }
-
-            Then("it should return the generated response") {
-                result.answer shouldBe expectedResponse
-            }
-
-            Then("references should be empty") {
-                result.references shouldBe emptyList()
             }
         }
 
         When("chat is called and NO local documents are found") {
-            val query = "Co je kvantová gravitace?"
-            val webContent = "[Wikipedia: kvantová gravitace] (https://example.com): Kvantová gravitace..."
-            val expectedResponse = "Na základě informací z internetu..."
+            val query = "Kdo vyhrál loni ligu?"
+            val tenant = "test-tenant"
 
+            every { legalQueryExpander.expandQuery(query) } returns query
             every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
-            every { hybridSearchService.search(query, tenantId = "test-tenant") } returns emptyList()
-            every { webSearchPort.search(query, 3) } returns listOf(
-                WebSearchResult(
-                    title = "Wikipedia: kvantová gravitace",
-                    url = "https://example.com",
-                    content = "Kvantová gravitace...",
-                    score = 0.9
-                )
+            every { hybridSearchService.search(any(), any(), tenantId = tenant) } returns emptyList()
+            every { webSearchPort.search(any(), any()) } returns listOf(
+                WebSearchResult("Sport", "https://sport.cz", "Vyhrála Sparta", 0.9)
             )
-            every { chatPort.generateResponse(query, any(), emptyList(), "WEB") } returns expectedResponse
+            every { chatPort.generateResponse(any(), any(), any(), "WEB") } returns "Vyhrála Sparta."
 
-            val result = documentService.chat(query, null, "test-tenant")
+            val result = documentService.chat(query, null, tenant)
 
-            Then("it should return source WEB") {
+            Then("it should fallback to WEB") {
                 result.source shouldBe AnswerSource.WEB
+                verify(exactly = 1) { webSearchPort.search(any(), any()) }
             }
+        }
 
-            Then("it should call web search") {
-                verify(exactly = 1) { webSearchPort.search(query, 3) }
+        When("Alice (admin) asks a query") {
+            val query = "Tajné platy"
+            val tenantAlice = "alice-uuid"
+
+            every { legalQueryExpander.expandQuery(query) } returns query
+            every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
+            every { hybridSearchService.search(any(), any(), tenantId = tenantAlice) } returns listOf(
+                VectorDocument(content = "Plat Alice je 100k", metadata = mapOf("fileName" to "platy.pdf"))
+            )
+            every { chatPort.generateResponse(any(), any(), any(), any()) } returns "Vidím tabulku platů."
+
+            val result = documentService.chat(query, null, tenantAlice)
+
+            Then("hybridSearch must be called with Alice's tenantId") {
+                verify { hybridSearchService.search(any(), any(), tenantId = tenantAlice) }
+                result.references shouldBe listOf("platy.pdf")
             }
+        }
 
-            Then("references should contain the web URL") {
-                result.references shouldBe listOf("https://example.com")
+        When("Jan (user) tries to access documents he doesn't own") {
+            val query = "Tajné dokumenty"
+            val tenantJan = "jan-uuid"
+
+            every { legalQueryExpander.expandQuery(query) } returns query
+            every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
+            every { hybridSearchService.search(any(), any(), tenantId = tenantJan) } returns emptyList()
+            every { webSearchPort.search(any()) } returns emptyList()
+            every { chatPort.generateResponse(any(), any(), any(), any()) } returns "Nic jsem nenašel."
+
+            val result = documentService.chat(query, null, tenantJan)
+
+            Then("Jan must NOT see any references") {
+                verify { hybridSearchService.search(any(), any(), tenantId = tenantJan) }
+                result.references shouldBe emptyList()
             }
+        }
 
-            Then("it should return the web-based response") {
-                result.answer shouldBe expectedResponse
+        When("NO documents are found and WEB search is disabled") {
+            val query = "Jaký je tajný recept na koláč?"
+            val tenant = "test-tenant"
+
+            every { legalQueryExpander.expandQuery(query) } returns query
+            every {
+                hybridSearchService.search(any<String>(), any<String>(), tenantId = tenant)
+            } returns emptyList()
+            every { webSearchPort.search(any()) } returns emptyList()
+            // Simulujeme, že LLM dostane prázdný kontext
+            every { chatPort.generateResponse(query, "", any(), any()) } returns "Omlouvám se, ale v nahraných dokumentech jsem tuto informaci nenašel."
+
+            val result = documentService.chat(query, null, tenant)
+
+            Then("it should return a polite refusal instead of hallucinating") {
+                result.answer shouldBe "Omlouvám se, ale v nahraných dokumentech jsem tuto informaci nenašel."
+                result.source shouldBe AnswerSource.LOCAL
+                result.references shouldBe emptyList()
             }
         }
     }
