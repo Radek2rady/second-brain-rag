@@ -24,7 +24,7 @@ class FileIngestionService(
     /**
      * Starts file ingestion asynchronously and returns a job ID for progress tracking.
      */
-    fun ingestFile(file: MultipartFile, tenantId: String): String {
+    fun ingestFile(file: MultipartFile, tenantId: String, accessLevel: String = "PRIVATE"): String {
         // Validate file size
         if (file.size > MAX_FILE_SIZE) {
             throw IllegalArgumentException("File is too large. Maximum size is 50MB.")
@@ -61,7 +61,8 @@ class FileIngestionService(
         val jobId = UUID.randomUUID().toString()
         val metadata = mapOf(
             "fileName" to fileName,
-            "documentType" to extension
+            "documentType" to extension,
+            "access_level" to accessLevel
         )
 
         progressTracker.startJob(jobId, fileName)

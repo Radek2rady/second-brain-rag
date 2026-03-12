@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.security.Principal
+import org.springframework.security.core.Authentication
+import org.slf4j.LoggerFactory
 
 @RestController
 @RequestMapping("/api/documents")
@@ -24,6 +26,7 @@ class DocumentController(
     private val progressTracker: IngestionProgressTracker,
     private val auditService: AuditService
 ) {
+    private val logger = LoggerFactory.getLogger(DocumentController::class.java)
 
     data class SaveRequest(val content: String, val metadata: Map<String, String>? = null)
     data class IngestRequest(val text: String, val metadata: Map<String, String>? = null)
@@ -101,10 +104,26 @@ class DocumentController(
     }
 
     @PostMapping("/upload")
-    fun uploadFile(@RequestParam("file") file: MultipartFile, principal: Principal): ResponseEntity<Map<String, String>> {
-        auditService.logAction(principal.name, principal.name, "UPLOAD", "File: ${file.originalFilename}")
+    fun uploadFile(
+        @RequestParam("file") file: MultipartFile, 
+        @RequestParam(defaultValue = "PRIVATE") accessLevel: String,
+        principal: Principal,
+        authentication: Authentication
+    ): ResponseEntity<Map<String, String>> {
+        val isAdmin = authentication.authorities.any { it.authority == "ROLE_ADMIN" || it.authority == "ADMIN" }
+        var finalAccessLevel = accessLevel.uppercase()
+        
+        if (finalAccessLevel == "GLOBAL" && !isAdmin) {
+            logger.warn("User {} attempted to upload GLOBAL document without ADMIN role. Defaulting to COMPANY.", principal.name)
+            finalAccessLevel = "COMPANY"
+        }
+        if (finalAccessLevel !in listOf("PRIVATE", "COMPANY", "GLOBAL")) {
+            finalAccessLevel = "PRIVATE"
+        }
+
+        auditService.logAction(principal.name, principal.name, "UPLOAD", "File: ${file.originalFilename}, Access: $finalAccessLevel")
         return try {
-            val jobId = fileIngestionService.ingestFile(file, principal.name)
+            val jobId = fileIngestionService.ingestFile(file, principal.name, finalAccessLevel)
             ResponseEntity.accepted().body(mapOf(
                 "status" to "processing",
                 "jobId" to jobId,

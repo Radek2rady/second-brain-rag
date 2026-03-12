@@ -104,7 +104,7 @@ class FullTextSearchAdapter(
             SELECT id, content, metadata
             FROM vector_store
             WHERE content_tsv @@ to_tsquery('simple', ?)
-            AND metadata->>'tenantId' = ?
+            AND (metadata->>'tenantId' = ? OR metadata->>'access_level' IN ('COMPANY', 'GLOBAL'))
             ORDER BY ts_rank(content_tsv, to_tsquery('simple', ?)) DESC
             LIMIT ?
         """.trimIndent()
@@ -159,7 +159,7 @@ class FullTextSearchAdapter(
             SELECT id, content, metadata
             FROM vector_store
             WHERE $whereClause
-            AND metadata->>'tenantId' = ?
+            AND (metadata->>'tenantId' = ? OR metadata->>'access_level' IN ('COMPANY', 'GLOBAL'))
             LIMIT ?
         """.trimIndent()
 

@@ -40,7 +40,7 @@ class VectorDocumentAdapter(
             .query(query)
             .topK(topK)
             .similarityThreshold(0.60)
-            .filterExpression("tenantId == '${tenantId}'")
+            .filterExpression("tenantId == '${tenantId}' || access_level == 'COMPANY' || access_level == 'GLOBAL'")
             .build()
         val results = vectorStore.similaritySearch(searchRequest)
 
@@ -60,7 +60,7 @@ class VectorDocumentAdapter(
     }
 
     override fun getAllDocuments(tenantId: String): List<VectorDocument> {
-        val sql = "SELECT id, content, metadata FROM vector_store WHERE metadata->>'tenantId' = ?"
+        val sql = "SELECT id, content, metadata FROM vector_store WHERE metadata->>'tenantId' = ? OR metadata->>'access_level' IN ('COMPANY', 'GLOBAL')"
         return jdbcTemplate.query(sql, { rs, _ ->
             // In pgvector, the id is usually a UUID string, content is text, metadata is JSONB
             // We'll deserialize metadata manually if needed, but for the UI we might only need id and content or minimal metadata.
@@ -104,7 +104,7 @@ class VectorDocumentAdapter(
     }
 
     override fun findAllMetadata(tenantId: String): List<String> {
-        val sql = "SELECT DISTINCT metadata->>'fileName' as file_name FROM vector_store WHERE metadata->>'tenantId' = ? AND metadata->>'fileName' IS NOT NULL"
+        val sql = "SELECT DISTINCT metadata->>'fileName' as file_name FROM vector_store WHERE (metadata->>'tenantId' = ? OR metadata->>'access_level' IN ('COMPANY', 'GLOBAL')) AND metadata->>'fileName' IS NOT NULL"
         return jdbcTemplate.queryForList(sql, String::class.java, tenantId)
     }
 }
