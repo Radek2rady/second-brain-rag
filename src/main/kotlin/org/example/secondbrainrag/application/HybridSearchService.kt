@@ -49,25 +49,22 @@ class HybridSearchService(
         
         // 2. Reranking Stage - ALWAYS use the ORIGINAL query for maximum precision
         logger.info("Reranking {} candidates via Cohere using ORIGINAL query: '{}'", totalCandidates.size, originalQuery)
-        val rerankedResults = rerankPort.rerank(originalQuery, totalCandidates)
+        val finalResults = try {
+            val rerankedResults = rerankPort.rerank(originalQuery, totalCandidates)
 
-        // 3. Thresholding & Top-K (top 5 with score > 0.05)
-        val threshold = 0.05
-        val finalResults = rerankedResults
-            .sortedByDescending { it.score }
-            .onEachIndexed { index, result -> 
-                if (index < 10) {
-                    logger.debug("Rerank Result #{} [score={}] content snippet: '{}...'", 
-                        index + 1, String.format("%.4f", result.score), result.document.content.take(60))
-                }
-            }
-            .filter { it.score > threshold }
-            .take(5)
-            .map { it.document }
+            // Pokud rerank vrátí výsledky, filtrujeme je
+            rerankedResults
+                .sortedByDescending { it.score }
+                .filter { it.score > 0.05 }
+                .take(5)
+                .map { it.document }
+        } catch (e: Exception) {
+            // KLÍČOVÝ FIX: Pokud Cohere vybuchne (401), nezahazuj data!
+            logger.error("Reranking failed ({}). Using raw candidates as fallback.", e.message)
+            totalCandidates.take(5)
+        }
 
-        logger.info("Reranking completed: {}/{} candidates passed threshold (>{}) and top-K limit", 
-            finalResults.size, totalCandidates.size, threshold)
-        
+        logger.info("Search completed: {} documents proceeding to AI", finalResults.size)
         return finalResults
     }
 }
