@@ -54,12 +54,17 @@ class CohereRerankAdapter(
         return try {
             val response = restTemplate.postForObject(apiUrl, entity, RerankResponse::class.java)
             
-            response?.results?.map { result ->
+            val results = response?.results?.map { result ->
                 RerankedDocument(
                     document = docs[result.index],
                     score = result.relevance_score
                 )
             } ?: emptyList()
+
+            logger.info("Cohere Rerank - Results count: {}, Top score: {}", 
+                results.size, results.firstOrNull()?.score ?: 0.0)
+            
+            results
         } catch (e: Exception) {
             logger.error("Cohere rerank failed: {}", e.message)
             // Fallback: return original documents with 0.0 score or just empty list?

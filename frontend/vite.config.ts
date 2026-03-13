@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'https://second-brain-rag-production.up.railway.app',
         changeOrigin: true,
         timeout: 3600000,
         proxyTimeout: 3600000,

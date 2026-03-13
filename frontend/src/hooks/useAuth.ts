@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 export function useAuth() {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('rag_token'));
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [currentUsername, setCurrentUsername] = useState<string>('');
 
@@ -30,7 +30,7 @@ export function useAuth() {
 
   const login = (newToken: string, roles: string[]) => {
     setToken(newToken);
-    localStorage.setItem('rag_token', newToken);
+    localStorage.setItem('token', newToken);
     localStorage.setItem('rag_roles', JSON.stringify(roles));
   };
 
@@ -38,7 +38,7 @@ export function useAuth() {
     setToken(null);
     setIsAdmin(false);
     setCurrentUsername('');
-    localStorage.removeItem('rag_token');
+    localStorage.removeItem('token');
     localStorage.removeItem('rag_roles');
   };
 

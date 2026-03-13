@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { VectorDocument } from '../types';
+import apiClient from '../api/client';
 
 export function useKnowledgeBase(token: string | null, autoLoad: boolean = false) {
   const [documents, setDocuments] = useState<VectorDocument[]>([]);
@@ -13,10 +14,8 @@ export function useKnowledgeBase(token: string | null, autoLoad: boolean = false
     if (!token) return;
     setIsDocumentsLoading(true);
     try {
-      const res = await fetch('http://localhost:8080/api/documents', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) setDocuments(await res.json());
+      const res = await apiClient.get('/api/documents');
+      setDocuments(res.data);
     } catch (e) { console.error(e); }
     setIsDocumentsLoading(false);
   };
@@ -30,11 +29,8 @@ export function useKnowledgeBase(token: string | null, autoLoad: boolean = false
   const handleDeleteDocument = async (id: string) => {
     if (!token || !confirm('Are you sure you want to delete this document?')) return;
     try {
-      const res = await fetch(`http://localhost:8080/api/documents/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) setDocuments(prev => prev.filter(d => d.id !== id));
+      await apiClient.delete(`/api/documents/${id}`);
+      setDocuments(prev => prev.filter(d => d.id !== id));
     } catch (e) { console.error(e); }
   };
 
@@ -48,25 +44,18 @@ export function useKnowledgeBase(token: string | null, autoLoad: boolean = false
     formData.append('accessLevel', accessLevel);
 
     try {
-      const response = await fetch('http://localhost:8080/api/documents/upload', {
-        method: 'POST',
+      await apiClient.post('/api/documents/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData,
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
-      const data = response.ok ? await response.json() : { message: 'Upload failed' };
-
-      if (response.ok) {
-        setUploadStatus(`✓ "${file.name}" uploaded successfully!`);
-        if (onSuccess) onSuccess();
-      } else {
-        setUploadStatus(`✗ Error: ${data.message}`);
-      }
-    } catch (error) {
+      setUploadStatus(`✓ "${file.name}" uploaded successfully!`);
+      if (onSuccess) onSuccess();
+    } catch (error: any) {
       console.error(error);
-      setUploadStatus('✗ Error uploading file.');
+      const message = error.response?.data?.message || 'Upload failed';
+      setUploadStatus(`✗ Error: ${message}`);
     } finally {
       setIsUploading(false);
       setTimeout(() => setUploadStatus(null), 4000);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Paperclip } from 'lucide-react';
+import apiClient from '../api/client';
 
 interface FileUploadProps {
   token: string | null;
@@ -30,25 +31,18 @@ export function FileUpload({ token, isAdmin, onUploadSuccess, minimal = false }:
     formData.append('accessLevel', accessLevel);
 
     try {
-      const response = await fetch('http://localhost:8080/api/documents/upload', {
-        method: 'POST',
+      await apiClient.post('/api/documents/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData,
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      const data = response.ok ? await response.json() : { message: 'Upload failed' };
-
-      if (response.ok) {
-        setStatus(`"${file.name}" uploaded successfully.`);
-        if (onUploadSuccess) onUploadSuccess();
-      } else {
-        setStatus(`Error: ${data.message}`);
-      }
-    } catch (error) {
+      setStatus(`"${file.name}" uploaded successfully.`);
+      if (onUploadSuccess) onUploadSuccess();
+    } catch (error: any) {
       console.error(error);
-      setStatus('Error uploading file.');
+      const message = error.response?.data?.message || 'Upload failed';
+      setStatus(`Error: ${message}`);
     } finally {
       setIsUploading(false);
       setTimeout(() => setStatus(null), 3000);

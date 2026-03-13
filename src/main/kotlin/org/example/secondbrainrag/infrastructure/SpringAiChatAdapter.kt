@@ -6,12 +6,15 @@ import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.messages.AssistantMessage
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.messages.Message
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
 class SpringAiChatAdapter(
     builder: ChatClient.Builder
 ) : ChatPort {
+
+    private val logger = LoggerFactory.getLogger(SpringAiChatAdapter::class.java)
 
     private val chatClient: ChatClient = builder.build()
 
@@ -50,7 +53,9 @@ class SpringAiChatAdapter(
             if (it.role == "user") UserMessage(it.content) else AssistantMessage(it.content)
         }
 
-        return chatClient.prompt()
+        logger.info("AI Request - Query: '{}', Context Size: {} chars", query, context.length)
+
+        val response = chatClient.prompt()
             .system { s ->
                 s.text(systemPrompt)
                     .param("context", context)
@@ -60,5 +65,8 @@ class SpringAiChatAdapter(
             .user(query)
             .call()
             .content() ?: "Omlouvám se, došlo k chybě při generování odpovědi."
+
+        logger.info("AI Response - Content: '{}'", response.take(100) + if (response.length > 100) "..." else "")
+        return response
     }
 }

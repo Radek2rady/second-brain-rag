@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Bot, Loader2 } from 'lucide-react';
+import apiClient from './api/client';
 
 interface LoginProps {
     onLoginSuccess: (token: string, roles: string[]) => void;
@@ -17,25 +18,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         setError('');
 
         try {
-            const res = await fetch('http://localhost:8080/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
+            const res = await apiClient.post('/api/auth/login', { username, password });
+            const data = res.data;
 
-            const data = await res.json();
-
-            if (res.ok) {
-                console.log("Login successful!");
-                console.log("JWT Token:", data.token);
-                console.log("Roles:", data.roles);
-                onLoginSuccess(data.token, data.roles);
-            } else {
-                setError(data.message || 'Login failed');
-            }
-        } catch (err) {
+            console.log("Login successful!");
+            console.log("JWT Token:", data.token);
+            console.log("Roles:", data.roles);
+            onLoginSuccess(data.token, data.roles);
+        } catch (err: any) {
             console.error(err);
-            setError('Error communicating with server');
+            setError(err.response?.data?.message || 'Login failed');
         } finally {
             setIsLoading(false);
         }

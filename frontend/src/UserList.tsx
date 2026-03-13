@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Shield, User } from 'lucide-react';
+import apiClient from './api/client';
 
 interface UserDto {
     id: number;
@@ -21,14 +22,8 @@ export default function UserList({ token, currentUsername }: UserListProps) {
     const fetchUsers = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('http://localhost:8080/api/users', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (res.ok) {
-                setUsers(await res.json());
-            }
+            const res = await apiClient.get('/api/users');
+            setUsers(res.data);
         } catch (e) {
             console.error(e);
         } finally {
@@ -43,23 +38,11 @@ export default function UserList({ token, currentUsername }: UserListProps) {
     const handleRoleChange = async (userId: number, newRole: string) => {
         setUpdatingId(userId);
         try {
-            const res = await fetch(`http://localhost:8080/api/users/${userId}/role`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ role: newRole })
-            });
-
-            if (res.ok) {
-                const updatedUser = await res.json();
-                setUsers(users.map(u => u.id === userId ? updatedUser : u));
-            } else {
-                alert('Error changing role.');
-            }
+            const res = await apiClient.patch(`/api/users/${userId}/role`, { role: newRole });
+            setUsers(users.map(u => u.id === userId ? res.data : u));
         } catch (e) {
             console.error(e);
+            alert('Error changing role.');
         } finally {
             setUpdatingId(null);
         }
