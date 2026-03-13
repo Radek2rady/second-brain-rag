@@ -39,7 +39,7 @@ class VectorDocumentAdapter(
         val searchRequest = SearchRequest.builder()
             .query(query)
             .topK(topK)
-            .similarityThreshold(0.60)
+            .similarityThreshold(0.35)
             .filterExpression("tenantId == '${tenantId}' || access_level == 'COMPANY' || access_level == 'GLOBAL'")
             .build()
         val results = vectorStore.similaritySearch(searchRequest)
