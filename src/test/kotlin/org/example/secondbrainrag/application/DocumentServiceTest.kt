@@ -25,7 +25,7 @@ class DocumentServiceTest : BehaviorSpec({
             val tenant = "test-tenant"
 
             every { legalQueryExpander.expandQuery(query) } returns query
-            every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
+            every { chatHistoryPort.getLastMessages(any(), any(), any()) } returns emptyList()
             every { hybridSearchService.search(any(), any(), tenantId = tenant) } returns listOf(
                 VectorDocument(content = "Paříž...", metadata = mapOf("fileName" to "geo.pdf"))
             )
@@ -45,7 +45,7 @@ class DocumentServiceTest : BehaviorSpec({
             val tenant = "test-tenant"
 
             every { legalQueryExpander.expandQuery(query) } returns query
-            every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
+            every { chatHistoryPort.getLastMessages(any(), any(), any()) } returns emptyList()
             every { hybridSearchService.search(any(), any(), tenantId = tenant) } returns emptyList()
             every { webSearchPort.search(any(), any()) } returns listOf(
                 WebSearchResult("Sport", "https://sport.cz", "Vyhrála Sparta", 0.9)
@@ -65,7 +65,7 @@ class DocumentServiceTest : BehaviorSpec({
             val tenantAlice = "alice-uuid"
 
             every { legalQueryExpander.expandQuery(query) } returns query
-            every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
+            every { chatHistoryPort.getLastMessages(any(), any(), any()) } returns emptyList()
             every { hybridSearchService.search(any(), any(), tenantId = tenantAlice) } returns listOf(
                 VectorDocument(content = "Plat Alice je 100k", metadata = mapOf("fileName" to "platy.pdf"))
             )
@@ -84,7 +84,7 @@ class DocumentServiceTest : BehaviorSpec({
             val tenantJan = "jan-uuid"
 
             every { legalQueryExpander.expandQuery(query) } returns query
-            every { chatHistoryPort.getLastMessages(any(), any()) } returns emptyList()
+            every { chatHistoryPort.getLastMessages(any(), any(), any()) } returns emptyList()
             every { hybridSearchService.search(any(), any(), tenantId = tenantJan) } returns emptyList()
             every { webSearchPort.search(any()) } returns emptyList()
             every { chatPort.generateResponse(any(), any(), any(), any()) } returns "Nic jsem nenašel."
