@@ -1,20 +1,18 @@
-import { Database, Paperclip, Loader2, FileText, Trash2 } from 'lucide-react';
+import { Database, Loader2, FileText, Trash2 } from 'lucide-react';
 import type { VectorDocument } from '../types';
+import { FileUpload } from './FileUpload';
 
 interface KnowledgeBaseProps {
   documents: VectorDocument[];
   isDocumentsLoading: boolean;
-  isUploading: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement>;
   handleDeleteDocument: (id: string) => void;
   isAdmin: boolean;
-  uploadAccessLevel: string;
-  setUploadAccessLevel: (level: string) => void;
+  token: string | null;
+  onUploadSuccess: () => void;
 }
 
 export function KnowledgeBase({
-  documents, isDocumentsLoading, isUploading, fileInputRef, handleDeleteDocument,
-  isAdmin, uploadAccessLevel, setUploadAccessLevel
+  documents, isDocumentsLoading, handleDeleteDocument, isAdmin, token, onUploadSuccess
 }: KnowledgeBaseProps) {
   return (
     <main className="flex-1 overflow-y-auto p-6 scroll-smooth">
@@ -24,24 +22,7 @@ export function KnowledgeBase({
             <Database className="w-5 h-5 text-blue-500" /> Documents in Database
           </h2>
           <div className="flex items-center gap-3">
-            <select
-              value={uploadAccessLevel}
-              onChange={(e) => setUploadAccessLevel(e.target.value)}
-              disabled={isUploading}
-              className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none disabled:opacity-50"
-            >
-              <option value="PRIVATE">🔒 Private</option>
-              <option value="COMPANY">🏢 Company-wide</option>
-              {isAdmin && <option value="GLOBAL">🌐 Global</option>}
-            </select>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="flex items-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
-            >
-              {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-              Upload File
-            </button>
+            <FileUpload token={token} isAdmin={isAdmin} onUploadSuccess={onUploadSuccess} />
             <div className="text-sm text-slate-400">{documents.length} chunks</div>
           </div>
         </div>
@@ -63,10 +44,10 @@ export function KnowledgeBase({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="font-mono text-xs text-slate-500 truncate">ID: {doc.id.substring(0, 8)}…</div>
+                    <div className="font-mono text-xs text-slate-500 truncate">ID: {doc.id.substring(0, 8)}â€¦</div>
                     {(doc.metadata?.fileName || doc.metadata?.source) && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/15 border border-blue-500/30 text-blue-400">
-                        📄 {doc.metadata.fileName || doc.metadata.source}
+                        đź“„ {doc.metadata.fileName || doc.metadata.source}
                       </span>
                     )}
                     {doc.metadata?.documentType && (
@@ -76,7 +57,7 @@ export function KnowledgeBase({
                     )}
                     {doc.metadata?.access_level && (
                       <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 text-slate-300 ml-2 border border-slate-700 uppercase">
-                        {doc.metadata.access_level === 'GLOBAL' ? '🌐 ' : doc.metadata.access_level === 'COMPANY' ? '🏢 ' : '🔒 '}
+                        {doc.metadata.access_level === 'GLOBAL' ? 'đźŚ ' : doc.metadata.access_level === 'COMPANY' ? 'đźŹ˘ ' : 'đź”’ '}
                         {doc.metadata.access_level}
                       </span>
                     )}
