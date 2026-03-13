@@ -2,6 +2,7 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /app
 COPY . .
+RUN chmod +x gradlew
 # Spustí build bez testů (v cloudu šetříme čas a kvóty)
 RUN ./gradlew bootJar -x test
 
