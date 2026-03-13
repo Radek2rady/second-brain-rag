@@ -1,0 +1,11 @@
+:{$PORT} {
+    root * dist
+    file_server
+    try_files {path} /index.html
+
+    # Toto vynutí UTF-8 pro všechny textové soubory
+    header {
+        Content-Type "text/html; charset=utf-8"
+        Character-Encoding "utf-8"
+    }
+}
