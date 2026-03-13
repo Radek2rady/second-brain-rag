@@ -9,7 +9,10 @@ class WebConfig : WebMvcConfigurer {
 
     override fun addCorsMappings(registry: CorsRegistry) {
         registry.addMapping("/**")
-            .allowedOrigins("http://localhost:5173") // Vite React default port
+            .allowedOriginPatterns(
+                "http://localhost:5173",
+                "https://*.railway.app"
+            )
             .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
             .allowedHeaders("*")
             .allowCredentials(true)

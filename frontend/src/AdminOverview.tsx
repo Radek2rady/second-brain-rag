@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, FileText, Activity, Users, TrendingUp } from 'lucide-react';
+import apiClient from './api/client';
 
 interface UserActivity {
     username: String;
@@ -23,16 +24,8 @@ export default function AdminOverview({ token }: AdminOverviewProps) {
     const fetchStats = async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('http://localhost:8080/api/admin/stats', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (res.ok) {
-                setStats(await res.json());
-            } else {
-                console.error("Failed to fetch admin statistics");
-            }
+            const res = await apiClient.get('/api/admin/stats');
+            setStats(res.data);
         } catch (e) {
             console.error(e);
         } finally {

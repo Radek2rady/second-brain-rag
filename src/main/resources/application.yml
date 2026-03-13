@@ -44,6 +44,9 @@ server:
   tomcat:
     connection-timeout: 3600000 # 1 hour
     max-swallow-size: 50MB
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/json,application/xml
 
 logging:
   level:

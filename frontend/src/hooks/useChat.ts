@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { ChatMessage } from '../types';
+import apiClient from '../api/client';
 
 export function useChat(token: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -10,10 +11,8 @@ export function useChat(token: string | null) {
   const fetchConversations = async () => {
     if (!token) return;
     try {
-      const res = await fetch('http://localhost:8080/api/documents/conversations', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) setConversations(await res.json());
+      const res = await apiClient.get('/api/documents/conversations');
+      setConversations(res.data);
     } catch (e) { console.error(e); }
   };
 
@@ -24,17 +23,15 @@ export function useChat(token: string | null) {
       if (onLoaded) onLoaded();
     }
     try {
-      const res = await fetch(`http://localhost:8080/api/documents/chat/history?conversationId=${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await apiClient.get('/api/documents/chat/history', {
+        params: { conversationId: id }
       });
-      if (res.ok) {
-        const history = await res.json();
-        setMessages(history.map((m: any) => ({
-          ...m,
-          source: 'LOCAL',
-          references: [],
-        })));
-      }
+      const history = res.data;
+      setMessages(history.map((m: any) => ({
+        ...m,
+        source: 'LOCAL',
+        references: [],
+      })));
     } catch (e) { console.error(e); }
   };
 
@@ -70,15 +67,11 @@ export function useChat(token: string | null) {
     setIsLoading(true);
 
     try {
-      const params = new URLSearchParams({ query: userMessage });
-      if (conversationId) params.append('conversationId', conversationId);
+      const params: any = { query: userMessage };
+      if (conversationId) params.conversationId = conversationId;
 
-      const response = await fetch(`http://localhost:8080/api/documents/chat?${params.toString()}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
+      const res = await apiClient.get('/api/documents/chat', { params });
+      const data = res.data;
 
       if (data.conversationId && data.conversationId !== conversationId) {
         setConversationId(data.conversationId);

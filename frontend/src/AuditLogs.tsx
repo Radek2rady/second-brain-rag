@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, ShieldAlert, ChevronLeft, ChevronRight } from 'lucide-react';
+import apiClient from './api/client';
 
 interface AuditEvent {
     id: string;
@@ -34,22 +35,14 @@ export default function AuditLogs({ token }: AuditLogsProps) {
     const fetchLogs = async (pageNumber: number) => {
         setIsLoading(true);
         try {
-            const params = new URLSearchParams({
+            const params = {
                 page: pageNumber.toString(),
                 size: '10',
                 username: usernameFilter,
                 action: actionFilter
-            });
-            const res = await fetch(`http://localhost:8080/api/audit?${params.toString()}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (res.ok) {
-                setData(await res.json());
-            } else {
-                console.error("Failed to fetch audit logs");
-            }
+            };
+            const res = await apiClient.get('/api/audit', { params });
+            setData(res.data);
         } catch (e) {
             console.error(e);
         } finally {
