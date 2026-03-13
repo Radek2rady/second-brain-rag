@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import Login from './Login';
 import UserList from './UserList';
 import AuditLogs from './AuditLogs';
@@ -22,8 +22,6 @@ export default function App() {
   
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadAccessLevel, setUploadAccessLevel] = useState('PRIVATE');
 
   // Chat Hook
   const {
@@ -41,26 +39,9 @@ export default function App() {
   const {
     documents,
     isDocumentsLoading,
-    isUploading,
-    uploadStatus,
     loadDocuments,
-    handleDeleteDocument,
-    uploadFile
+    handleDeleteDocument
   } = useKnowledgeBase(token, activeTab === 'knowledge');
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      await uploadFile(file, uploadAccessLevel, () => {
-        if (activeTab === 'knowledge') {
-          loadDocuments();
-        }
-      });
-      if (fileInputRef.current) {
-         fileInputRef.current.value = '';
-      }
-    }
-  };
 
   if (!token) {
     return <Login onLoginSuccess={login} />;
@@ -94,33 +75,22 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
         <TopBar setIsOpen={setIsSidebarOpen} />
         
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
-          accept=".txt,.md" 
-          onChange={handleFileChange}
-        />
-
         {activeTab === 'chat' ? (
           <ChatWindow
             messages={messages}
             isLoading={isLoading}
             sendMessage={sendMessage}
-            isUploading={isUploading}
-            uploadStatus={uploadStatus}
-            fileInputRef={fileInputRef as React.RefObject<HTMLInputElement>}
+            token={token}
+            isAdmin={isAdmin}
           />
         ) : activeTab === 'knowledge' ? (
           <KnowledgeBase
             documents={documents}
             isDocumentsLoading={isDocumentsLoading}
-            isUploading={isUploading}
-            fileInputRef={fileInputRef as React.RefObject<HTMLInputElement>}
             handleDeleteDocument={handleDeleteDocument}
             isAdmin={isAdmin}
-            uploadAccessLevel={uploadAccessLevel}
-            setUploadAccessLevel={setUploadAccessLevel}
+            token={token}
+            onUploadSuccess={loadDocuments}
           />
         ) : activeTab === 'users' && isAdmin ? (
           <main className="flex-1 overflow-y-auto p-6 scroll-smooth bg-slate-950">

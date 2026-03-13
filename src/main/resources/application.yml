@@ -40,6 +40,7 @@ spring:
       api-key: ${COHERE_API_KEY}
 
 server:
+  port: ${PORT:8080}
   tomcat:
     connection-timeout: 3600000 # 1 hour
     max-swallow-size: 50MB
