@@ -15,7 +15,7 @@ spring:
       request-timeout: 3600000 # 1 hour for long embedding processes
 
   datasource:
-    url: jdbc:postgresql://db.fyfvyxztprbllrhslnnj.supabase.co:5432/postgres
+    url: jdbc:postgresql://db.fyfvyxztprbllrhslnnj.supabase.co:6543/postgres?prepareThreshold=0
     username: postgres
     password: ${DB_BRAIN_RAG_PASSWORD}
     driver-class-name: org.postgresql.Driver
