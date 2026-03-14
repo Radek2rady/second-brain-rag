@@ -111,11 +111,20 @@ class DocumentService(
         chatHistoryPort.saveMessage(activeConversationId, tenantId, ChatMessage(role = "user", content = query))
         chatHistoryPort.saveMessage(activeConversationId, tenantId, ChatMessage(role = "assistant", content = response))
 
+        // AI might reject local documents and hallucinate/use internet info. 
+        // If it outputs the warning, we should NOT display the local files as sources.
+        var finalReferences = references
+        var finalSource = source
+        if (response.contains("Následující informace pocházejí z internetu", ignoreCase = true)) {
+            finalReferences = webReferences
+            finalSource = AnswerSource.WEB
+        }
+
         return ChatResponseDomain(
             conversationId = activeConversationId,
             answer = response,
-            source = source,
-            references = references
+            source = finalSource,
+            references = finalReferences
         )
     }
 }
