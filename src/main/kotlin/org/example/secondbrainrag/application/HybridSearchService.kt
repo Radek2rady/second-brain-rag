@@ -47,24 +47,13 @@ class HybridSearchService(
 
         val totalCandidates = candidates.take(candidateLimit)
         
-        // 2. Reranking Stage - ALWAYS use the ORIGINAL query for maximum precision
-        logger.info("Reranking {} candidates via Cohere using ORIGINAL query: '{}'", totalCandidates.size, originalQuery)
-        val finalResults = try {
-            val rerankedResults = rerankPort.rerank(originalQuery, totalCandidates)
+        // 2. Reranking Stage - AMPUTATED. Taking top 5-10 direct candidates immediately.
+        // We completely skip the reranking logic (rerankPort) due to 401 Unauthorized errors from Cohere.
+        // Take Top 8 candidates directly
+        val finalResults = totalCandidates.take(8)
 
-            // Pokud rerank vrátí výsledky, filtrujeme je
-            rerankedResults
-                .sortedByDescending { it.score }
-                .filter { it.score > 0.05 }
-                .take(5)
-                .map { it.document }
-        } catch (e: Exception) {
-            // KLÍČOVÝ FIX: Pokud Cohere vybuchne (401), nezahazuj data!
-            logger.error("Reranking failed ({}). Using raw candidates as fallback.", e.message)
-            totalCandidates.take(5)
-        }
-
-        logger.info("Search completed: {} documents proceeding to AI", finalResults.size)
+        // Clear logging as requested
+        logger.info("Hybrid search returning {} direct candidates for AI context (Reranking skipped).", finalResults.size)
         return finalResults
     }
 }
